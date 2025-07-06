@@ -6,7 +6,12 @@ import {
 
 const router = express.Router();
 
-// Monta el router de admin bajo /admin
+/**
+ * Admin routes for managing and searching personal info.
+ *
+ * POST /admin/personal-info - Create a new personal info entry.
+ * GET /admin/search-personal-info - Search for similar personal info entries.
+ */
 router.post('/personal-info', personalInfoController);
 router.get('/search-personal-info', searchPersonalInfoController);
 
