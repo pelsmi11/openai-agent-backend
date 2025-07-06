@@ -1,22 +1,36 @@
 import { getSearchPersonalInfoTool } from './agent-tools.js';
 import { Agent, run } from '@openai/agents';
 
+/**
+ * Calls the OpenAI Agent to answer questions about Hector using the searchPersonalInfo tool.
+ *
+ * @param {string} message - The user's question for Hector.
+ * @returns {Promise<{ reply: string }>} - The agent's reply.
+ */
 export async function askToHector(message) {
   const searchPersonalInfo = await getSearchPersonalInfoTool();
   const agent = new Agent({
     name: 'PersonalInfoAgent',
-    instructions: 'You answer questions about Hector using the searchPersonalInfo tool.',
+    instructions:
+      'You answer questions about Hector using the searchPersonalInfo tool.',
     tools: [searchPersonalInfo],
   });
   const result = await run(agent, message);
   return { reply: result.finalOutput };
 }
 
+/**
+ * Streams the agent's response to the client using Server-Sent Events (SSE).
+ *
+ * @param {string} message - The user's question for Hector.
+ * @param {import('express').Response} res - The Express response object for streaming.
+ */
 export async function askToHectorStream(message, res) {
   const searchPersonalInfo = await getSearchPersonalInfoTool();
   const agent = new Agent({
     name: 'PersonalInfoAgent',
-    instructions: 'You answer questions about Hector using the searchPersonalInfo tool.',
+    instructions:
+      'You answer questions about Hector using the searchPersonalInfo tool.',
     tools: [searchPersonalInfo],
   });
   res.setHeader('Content-Type', 'text/event-stream');

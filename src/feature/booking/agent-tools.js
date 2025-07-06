@@ -2,24 +2,40 @@ import z from 'zod';
 import { tool } from '@openai/agents';
 import { pgPool } from '../../lib/pg/client.js';
 import { getEmbedding } from './openai-embedding.util.js';
+import { EMBEDDING_SEARCH_DEFAULTS } from '../../utils/constants/dafultvalues.js';
 
+/**
+ * Returns an OpenAI Agent tool for semantic search over personal information.
+ *
+ * The tool accepts a question and optional match_threshold and match_count parameters,
+ * generates an embedding for the question, and queries the database for similar entries.
+ *
+ * @returns {Promise<any>} - The configured OpenAI Agent tool.
+ */
 export const getSearchPersonalInfoTool = async () => {
   return tool({
     name: 'searchPersonalInfo',
     description: 'Searches personal information by semantic similarity',
     parameters: z.object({
       question: z.string().describe('The user question about Hector'),
-      match_threshold: z.number().optional().default(0.9999), // Puedes tunear el valor
-      match_count: z.number().optional().default(3),
+      match_threshold: z
+        .number()
+        .optional()
+        .default(EMBEDDING_SEARCH_DEFAULTS.match_threshold), // You can tune this value
+      match_count: z
+        .number()
+        .optional()
+        .default(EMBEDDING_SEARCH_DEFAULTS.match_count),
     }),
     execute: async ({
       question,
-      match_threshold = 0.9999,
-      match_count = 3,
+      match_threshold = EMBEDDING_SEARCH_DEFAULTS.match_threshold,
+      match_count = EMBEDDING_SEARCH_DEFAULTS.match_count,
     }) => {
+      // Generate embedding for the question
       const embedding = await getEmbedding(question);
 
-      // Llama a tu función SQL con los parámetros
+      // Query the database for similar personal info
       const sql = `
         SELECT *
         FROM match_personal_info(
@@ -35,24 +51,24 @@ export const getSearchPersonalInfoTool = async () => {
         match_count,
       ]);
 
-      // Recorta el contenido para no exceder 10KB si es necesario
+      // Limit the response size to avoid exceeding 10KB
       const resultsfined = result.rows.map((row) => ({
         id: row.id,
-        content: row.content, // Ajusta a tu gusto
+        content: row.content, // Adjust as needed
         category: row.category,
       }));
       const jsonResponse = JSON.stringify(resultsfined);
       if (jsonResponse.length > 10_000) {
         console.log({
-          mensaje:
-            'Demasiada información, por favor sé más específico en tu pregunta.',
-          longitud: jsonResponse.length,
+          message:
+            'Too much information, please be more specific in your question.',
+          length: jsonResponse.length,
         });
-        // Recorta aún más, o lanza un error amigable
+        // Return a friendly error if too much data
         return [
           {
             content:
-              'Demasiada información, por favor sé más específico en tu pregunta.',
+              'Too much information, please be more specific in your question.',
           },
         ];
       }

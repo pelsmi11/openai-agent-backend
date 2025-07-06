@@ -6,7 +6,13 @@ import {
 
 const router = express.Router();
 
-// POST /admin/personal-info
+/**
+ * Controller for handling POST /admin/personal-info requests.
+ * Receives content and category in the request body and creates a new personal info entry.
+ *
+ * @param {express.Request} req - The Express request object.
+ * @param {express.Response} res - The Express response object.
+ */
 export const personalInfoController = async (req, res) => {
   const { content, category } = req.body;
   if (!content || !category) {
@@ -22,7 +28,13 @@ export const personalInfoController = async (req, res) => {
   }
 };
 
-// GET /admin/search-personal-info
+/**
+ * Controller for handling GET /admin/search-personal-info requests.
+ * Receives a query string (q) and optional count and threshold, and returns similar personal info entries.
+ *
+ * @param {express.Request} req - The Express request object.
+ * @param {express.Response} res - The Express response object.
+ */
 export const searchPersonalInfoController = async (req, res) => {
   const { q, count, threshold } = req.query;
   if (!q) {

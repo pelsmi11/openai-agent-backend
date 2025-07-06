@@ -3,7 +3,13 @@ import { askToHectorController } from './booking.controller.js';
 
 const router = express.Router();
 
-// Monta el router de admin bajo /admin
+/**
+ * Route for handling agent Q&A requests about Hector.
+ *
+ * POST /booking/ask-to-hector
+ * Body: { message: string }
+ * Response: { reply: string }
+ */
 router.post('/ask-to-hector', askToHectorController);
 
 export default router;
