@@ -12,7 +12,7 @@ export async function askToHector(message) {
   const agent = new Agent({
     name: 'PersonalInfoAgent',
     instructions:
-      'You answer questions about Hector using the searchPersonalInfo tool.',
+      'Respondes preguntas sobre Héctor usando la herramienta searchPersonalInfo.',
     tools: [searchPersonalInfo],
   });
   const result = await run(agent, message);
