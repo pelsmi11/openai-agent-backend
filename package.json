@@ -17,12 +17,12 @@
     "@langchain/langgraph": "^1.4.8",
     "@langchain/langgraph-checkpoint-postgres": "^1.0.4",
     "@langchain/openai": "^1.5.5",
-    "@sendgrid/mail": "^8.1.5",
     "cors": "^2.8.5",
     "dotenv": "^17.0.1",
     "express": "^5.1.0",
     "googleapis": "^150.0.1",
     "pg": "^8.16.3",
+    "resend": "^6.17.2",
     "zod": "^3.25.74"
   },
   "devDependencies": {

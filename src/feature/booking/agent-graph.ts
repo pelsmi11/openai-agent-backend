@@ -17,14 +17,23 @@ const MEETING_OFFER_NUDGE =
 
 const MEETING_OFFER_THRESHOLD = 5;
 
+// Computed per request (not cached at module load) so it's accurate no matter how long the
+// server has been running — the model has no other way to know "today", and without this
+// it hallucinates arbitrary (sometimes past) dates for relative references like "el jueves".
+function todayContext(): string {
+  const now = new Date();
+  const weekday = now.toLocaleDateString('es-AR', { weekday: 'long', timeZone: 'UTC' });
+  return `Hoy es ${weekday}, ${now.toISOString()} (UTC). Usá esta fecha como referencia para calcular cualquier fecha relativa ("el jueves", "mañana", "la próxima semana", etc.) — siempre a futuro respecto a esta fecha.`;
+}
+
 async function agentNode(state: typeof MessagesAnnotation.State) {
   // Derived from the message history instead of a separate counter field, so there's a
   // single source of truth for how many turns the conversation has had.
   const humanMessageCount = state.messages.filter(HumanMessage.isInstance).length;
   const systemPrompt =
     humanMessageCount >= MEETING_OFFER_THRESHOLD
-      ? `${BASE_SYSTEM_PROMPT} ${MEETING_OFFER_NUDGE}`
-      : BASE_SYSTEM_PROMPT;
+      ? `${BASE_SYSTEM_PROMPT} ${todayContext()} ${MEETING_OFFER_NUDGE}`
+      : `${BASE_SYSTEM_PROMPT} ${todayContext()}`;
 
   const response = await modelWithTools.invoke([
     new SystemMessage(systemPrompt),

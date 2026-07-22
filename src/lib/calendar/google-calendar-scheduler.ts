@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { google } from 'googleapis';
 import { CONFIG } from '../../utils/constants/config.js';
 import type {
@@ -22,30 +21,28 @@ export class GoogleCalendarScheduler implements CalendarScheduler {
     description,
     startISO,
     endISO,
-    attendeeEmail,
   }: CreateMeetingParams): Promise<CreateMeetingResult> {
+    // Note: a service account cannot add attendees to an event without Domain-Wide
+    // Delegation, which only exists on Google Workspace — not on a personal Gmail
+    // calendar like this one. The attendee is notified via EmailSender instead
+    // (see scheduleMeetingTool), the event itself is just created on Hector's calendar.
+    //
+    // Also skips conferenceData (auto-generated Google Meet link): Calendar API
+    // reliably rejects Meet creation requests from a bare service account
+    // ("Invalid conference type value") even when it has calendar access — Meet
+    // auto-creation needs a real authenticated user (OAuth), not a service account.
     const { data } = await this.calendar.events.insert({
       calendarId: CONFIG.GOOGLE_CALENDAR_ID,
-      sendUpdates: 'all',
-      conferenceDataVersion: 1,
       requestBody: {
         summary,
         description,
         start: { dateTime: startISO },
         end: { dateTime: endISO },
-        attendees: [{ email: attendeeEmail }],
-        conferenceData: {
-          createRequest: {
-            requestId: randomUUID(),
-            conferenceSolutionKey: { type: 'hangoutsMeet' },
-          },
-        },
       },
     });
 
     return {
       eventLink: data.htmlLink ?? '',
-      meetLink: data.hangoutLink ?? undefined,
     };
   }
 }

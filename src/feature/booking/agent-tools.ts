@@ -16,39 +16,44 @@ export const searchPersonalInfoTool = tool(
     match_threshold = EMBEDDING_SEARCH_DEFAULTS.match_threshold,
     match_count = EMBEDDING_SEARCH_DEFAULTS.match_count,
   }) => {
-    const embedding = await getEmbedding(question);
+    try {
+      const embedding = await getEmbedding(question);
 
-    const sql = `
-      SELECT *
-      FROM match_personal_info(
-          $1,  -- embedding (vector/array)
-          $2,  -- match_threshold
-          $3   -- match_count
-      );
-      `;
-    const embeddingStr = `[${embedding.join(',')}]`;
-    const result = await pgPool.query(sql, [
-      embeddingStr,
-      match_threshold,
-      match_count,
-    ]);
-
-    // Limit the response size to avoid exceeding 10KB
-    const resultsfined = result.rows.map((row) => ({
-      id: row.id,
-      content: row.content,
-      category: row.category,
-    }));
-    const jsonResponse = JSON.stringify(resultsfined);
-    if (jsonResponse.length > 10_000) {
-      return JSON.stringify([
-        {
-          content:
-            'Too much information, please be more specific in your question.',
-        },
+      const sql = `
+        SELECT *
+        FROM match_personal_info(
+            $1,  -- embedding (vector/array)
+            $2,  -- match_threshold
+            $3   -- match_count
+        );
+        `;
+      const embeddingStr = `[${embedding.join(',')}]`;
+      const result = await pgPool.query(sql, [
+        embeddingStr,
+        match_threshold,
+        match_count,
       ]);
+
+      // Limit the response size to avoid exceeding 10KB
+      const resultsfined = result.rows.map((row) => ({
+        id: row.id,
+        content: row.content,
+        category: row.category,
+      }));
+      const jsonResponse = JSON.stringify(resultsfined);
+      if (jsonResponse.length > 10_000) {
+        return JSON.stringify([
+          {
+            content:
+              'Too much information, please be more specific in your question.',
+          },
+        ]);
+      }
+      return jsonResponse;
+    } catch (error) {
+      console.error('[searchPersonalInfo] failed:', error);
+      return JSON.stringify({ error: 'No se pudo buscar la información en este momento.' });
     }
-    return jsonResponse;
   },
   {
     name: 'searchPersonalInfo',
@@ -68,9 +73,36 @@ export const searchPersonalInfoTool = tool(
 );
 
 /**
- * Schedules a meeting with Hector: creates the event on his Google Calendar (with a Google
- * Meet link, inviting the given attendee) and sends a confirmation email via SendGrid. Only
- * call once the attendee's email and their preferred date/time are known.
+ * Builds a Google Calendar "add event" link (calendar.google.com/calendar/render) so the
+ * recipient can add the meeting to their own calendar with one click — the backend only has
+ * a service account, which can't invite them directly (see google-calendar-scheduler.ts).
+ */
+function buildAddToCalendarLink({
+  summary,
+  description,
+  startISO,
+  endISO,
+}: {
+  summary: string;
+  description?: string;
+  startISO: string;
+  endISO: string;
+}): string {
+  const toGoogleDate = (iso: string) => iso.replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: summary,
+    dates: `${toGoogleDate(startISO)}/${toGoogleDate(endISO)}`,
+  });
+  if (description) params.set('details', description);
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+/**
+ * Schedules a meeting with Hector: creates the event on his Google Calendar and sends a
+ * confirmation email via Resend, with a one-click "add to your calendar" link (the backend
+ * uses a service account, which can't invite attendees directly). Only call once the
+ * attendee's email and their preferred date/time are known.
  */
 export const scheduleMeetingTool = tool(
   async ({ attendee_email, start_datetime, duration_minutes = 30, reason }) => {
@@ -79,33 +111,45 @@ export const scheduleMeetingTool = tool(
       return JSON.stringify({ error: 'La fecha/hora proporcionada no es válida.' });
     }
     const end = new Date(start.getTime() + duration_minutes * 60_000);
+    const summary = reason ? `Reunión con Héctor: ${reason}` : 'Reunión con Héctor';
 
-    const { eventLink, meetLink } = await calendarScheduler.createMeeting({
-      summary: reason ? `Reunión con Héctor: ${reason}` : 'Reunión con Héctor',
-      description: reason,
-      startISO: start.toISOString(),
-      endISO: end.toISOString(),
-      attendeeEmail: attendee_email,
-    });
+    try {
+      const { eventLink } = await calendarScheduler.createMeeting({
+        summary,
+        description: reason,
+        startISO: start.toISOString(),
+        endISO: end.toISOString(),
+        attendeeEmail: attendee_email,
+      });
 
-    await emailSender.send({
-      to: attendee_email,
-      subject: 'Confirmación de tu reunión con Héctor',
-      text: [
-        `Tu reunión con Héctor quedó agendada para ${start.toISOString()}.`,
-        meetLink ? `Link de Google Meet: ${meetLink}` : undefined,
-        'También recibirás una invitación de Google Calendar.',
-      ]
-        .filter(Boolean)
-        .join('\n'),
-    });
+      const addToCalendarLink = buildAddToCalendarLink({
+        summary,
+        description: reason,
+        startISO: start.toISOString(),
+        endISO: end.toISOString(),
+      });
 
-    return JSON.stringify({ confirmed: true, eventLink, meetLink, start: start.toISOString() });
+      await emailSender.send({
+        to: attendee_email,
+        subject: 'Confirmación de tu reunión con Héctor',
+        text: [
+          `Tu reunión con Héctor quedó agendada para ${start.toISOString()}.`,
+          `Agregala a tu Google Calendar con un clic: ${addToCalendarLink}`,
+        ].join('\n'),
+      });
+
+      return JSON.stringify({ confirmed: true, eventLink, addToCalendarLink, start: start.toISOString() });
+    } catch (error) {
+      console.error('[scheduleMeeting] failed:', error);
+      return JSON.stringify({
+        error: 'No se pudo agendar la reunión en este momento. Avisale al usuario y ofrecele el contacto directo.',
+      });
+    }
   },
   {
     name: 'scheduleMeeting',
     description:
-      'Agenda una reunión con Héctor: crea el evento en su Google Calendar (con Google Meet, invitando al email indicado) y envía un correo de confirmación. Solo llamar cuando ya se tenga el email del interesado y la fecha/hora deseada.',
+      'Agenda una reunión con Héctor: crea el evento en su Google Calendar y envía un correo de confirmación con un link para que el interesado agregue el evento a su propio calendario. Solo llamar cuando ya se tenga el email del interesado y la fecha/hora deseada.',
     schema: z.object({
       attendee_email: z
         .string()

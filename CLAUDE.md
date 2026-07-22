@@ -19,7 +19,7 @@ Known environment quirk: `pnpm build`/`pnpm dev`/`pnpm start` go through pnpm's 
 
 ## Architecture
 
-Express 5 backend written in **TypeScript** (ESM — `"type": "module"`, `moduleResolution: "NodeNext"`) that exposes a **LangGraph.js** agent ("Hector") backed by pgvector semantic search over a `personal_info` table, with tools to schedule a meeting on Google Calendar and send a confirmation via SendGrid. Source lives entirely under `src/**/*.ts`; relative imports use `.js` extensions even though the files are `.ts` — that's required by NodeNext resolution (it refers to the emitted output), not a mistake.
+Express 5 backend written in **TypeScript** (ESM — `"type": "module"`, `moduleResolution: "NodeNext"`) that exposes a **LangGraph.js** agent ("Hector") backed by pgvector semantic search over a `personal_info` table, with tools to schedule a meeting on Google Calendar and send a confirmation via Resend. Source lives entirely under `src/**/*.ts`; relative imports use `.js` extensions even though the files are `.ts` — that's required by NodeNext resolution (it refers to the emitted output), not a mistake.
 
 **Request flow:** `server.ts` mounts feature routers → `*.routes.ts` → `*.controller.ts` (parses/validates req, calls service, shapes res) → `*.service.ts` (business logic, DB/model calls). Each feature lives in `src/feature/<name>/` and follows this three-file split; keep new features consistent with it.
 
@@ -30,7 +30,7 @@ Express 5 backend written in **TypeScript** (ESM — `"type": "module"`, `module
 **Model layer — Vercel AI Gateway, no adapter of its own:** `src/lib/ai-gateway/models.ts` builds `chatModel` (`ChatOpenAI`) and `embeddingsModel` (`OpenAIEmbeddings`) from `@langchain/openai`, pointed at the Gateway's OpenAI-compatible endpoint (`CONFIG.AI_GATEWAY_BASE_URL`, default `https://ai-gateway.vercel.sh/v1`) with model ids like `openai/gpt-4o-mini` / `openai/text-embedding-3-small` from `CONFIG.AI_GATEWAY_CHAT_MODEL`/`AI_GATEWAY_EMBEDDING_MODEL`. Swapping the model/provider is an env var change, not a code change — there's deliberately no extra abstraction layer on top of these two exports, since the Gateway + LangChain's own provider classes already are that abstraction.
 
 **Adapter pattern for external providers that DO have a hand-written interface:**
-- `src/lib/email/` — `EmailSender` interface, `SendGridEmailSender` implementation, `emailSender` singleton exported from `index.ts`.
+- `src/lib/email/` — `EmailSender` interface, `ResendEmailSender` implementation, `emailSender` singleton exported from `index.ts`.
 - `src/lib/calendar/` — `CalendarScheduler` interface, `GoogleCalendarScheduler` implementation (service account JWT auth, auto-creates a Google Meet link via `conferenceData`), `calendarScheduler` singleton exported from `index.ts`.
 - Tools and services depend on these interfaces, never on `@sendgrid/mail`/`googleapis` directly — swapping providers means writing a new class, not touching call sites.
 
@@ -44,7 +44,7 @@ Express 5 backend written in **TypeScript** (ESM — `"type": "module"`, `module
 
 **Semantic search pattern** (used identically in `admin.service.ts` and `agent-tools.ts`): embed text → format as a `'[...]'` pgvector literal string → call the Postgres function `match_personal_info(embedding, match_threshold, match_count)` (defined in `sql/tables_agent.sql`, uses `<=>` cosine/L2 distance via an HNSW index) → truncate/guard results to stay under a 10KB JSON response. Default thresholds live in `src/utils/constants/dafultvalues.ts` (`EMBEDDING_SEARCH_DEFAULTS`) — note the filename typo, that's the real path.
 
-**Config:** all env vars are read once through `CONFIG` in `src/utils/constants/config.ts` (`DATABASE_URL`, `AI_GATEWAY_*`, `SENDGRID_*`, `GOOGLE_*`, `JWT_SECRET`, `PORT`, `NODE_ENV` — no `OPENAI_API_KEY` anymore, the raw `openai` package and `@openai/agents` were both removed in favor of the Gateway + LangGraph). Use `CONFIG.X`, not `process.env.X` directly, in app code. `pgPool` auto-disables SSL cert verification when `DATABASE_URL` contains `neon.tech`.
+**Config:** all env vars are read once through `CONFIG` in `src/utils/constants/config.ts` (`DATABASE_URL`, `AI_GATEWAY_*`, `RESEND_*`, `GOOGLE_*`, `JWT_SECRET`, `PORT`, `NODE_ENV` — no `OPENAI_API_KEY` anymore, the raw `openai` package and `@openai/agents` were both removed in favor of the Gateway + LangGraph). Use `CONFIG.X`, not `process.env.X` directly, in app code. `pgPool` auto-disables SSL cert verification when `DATABASE_URL` contains `neon.tech`.
 
 **Agent instructions are in Spanish** in `agent-graph.ts` — the DB `content`/`category` data and target users are Spanish-speaking; keep that in mind when touching prompts or responses.
 

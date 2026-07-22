@@ -16,8 +16,8 @@ export const CONFIG = {
   AI_GATEWAY_EMBEDDING_MODEL:
     process.env.AI_GATEWAY_EMBEDDING_MODEL || 'openai/text-embedding-3-small',
 
-  SENDGRID_API_KEY: process.env.SENDGRID_API_KEY || '',
-  SENDGRID_FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL || '',
+  RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+  RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || '',
 
   GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID || '',
   GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '',
