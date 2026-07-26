@@ -1,7 +1,7 @@
 import { StateGraph, MessagesAnnotation, END, START } from '@langchain/langgraph';
 import { ToolNode, toolsCondition } from '@langchain/langgraph/prebuilt';
 import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
-import { SystemMessage, HumanMessage } from '@langchain/core/messages';
+import { SystemMessage, HumanMessage, isAIMessage } from '@langchain/core/messages';
 import { chatModel } from '../../lib/ai-gateway/models.js';
 import { searchPersonalInfoTool, scheduleMeetingTool } from './agent-tools.js';
 import { CONFIG } from '../../utils/constants/config.js';
@@ -75,4 +75,23 @@ export async function runAgent(message: string, threadId: string): Promise<strin
   return typeof lastMessage.content === 'string'
     ? lastMessage.content
     : JSON.stringify(lastMessage.content);
+}
+
+/**
+ * Same as runAgent, but yields the reply token by token as the model generates it (streamMode
+ * "messages" gives one message chunk per token/delta, from any node — including the raw
+ * ToolMessage output of searchPersonalInfo/scheduleMeeting, which isAIMessage filters out so
+ * only the model's own text reaches the caller). While a tool is being called there's no text
+ * to yield yet — chunks resume once the agent node runs again with the tool's result.
+ */
+export async function* streamAgent(message: string, threadId: string): AsyncGenerator<string> {
+  const stream = await graph.stream(
+    { messages: [new HumanMessage(message)] },
+    { configurable: { thread_id: threadId }, streamMode: 'messages' },
+  );
+  for await (const [chunk] of stream) {
+    if (isAIMessage(chunk) && typeof chunk.content === 'string' && chunk.content.length > 0) {
+      yield chunk.content;
+    }
+  }
 }

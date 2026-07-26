@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { runAgent } from './agent-graph.js';
+import { runAgent, streamAgent } from './agent-graph.js';
 
 /**
  * Calls the Hector agent (LangGraph) with the user's message. Conversation history and the
@@ -17,4 +17,17 @@ export async function askToHector(
   const threadId = conversationId || randomUUID();
   const reply = await runAgent(message, threadId);
   return { reply, conversationId: threadId };
+}
+
+/**
+ * Streaming variant of askToHector: same agent/history, but returns the conversation id
+ * immediately and the reply as an async generator of text chunks the caller can forward as
+ * they arrive (see booking.controller.ts's SSE handler).
+ */
+export function askToHectorStream(
+  message: string,
+  conversationId?: string,
+): { conversationId: string; tokens: AsyncGenerator<string> } {
+  const threadId = conversationId || randomUUID();
+  return { conversationId: threadId, tokens: streamAgent(message, threadId) };
 }
