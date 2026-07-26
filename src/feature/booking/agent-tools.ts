@@ -83,11 +83,13 @@ function buildAddToCalendarLink({
   description,
   startISO,
   endISO,
+  meetUrl,
 }: {
   summary: string;
   description?: string;
   startISO: string;
   endISO: string;
+  meetUrl?: string;
 }): string {
   const toGoogleDate = (iso: string) => iso.replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const params = new URLSearchParams({
@@ -95,7 +97,11 @@ function buildAddToCalendarLink({
     text: summary,
     dates: `${toGoogleDate(startISO)}/${toGoogleDate(endISO)}`,
   });
-  if (description) params.set('details', description);
+  // Without this, the Meet link only lived in the confirmation email — once the recipient
+  // added the event to their own calendar, they'd have no way to find it from there.
+  const details = [description, meetUrl ? `Google Meet: ${meetUrl}` : null].filter(Boolean).join('\n\n');
+  if (details) params.set('details', details);
+  if (meetUrl) params.set('location', meetUrl);
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
@@ -216,6 +222,7 @@ export const scheduleMeetingTool = tool(
         description: reason,
         startISO: start.toISOString(),
         endISO: end.toISOString(),
+        meetUrl: CONFIG.GOOGLE_MEET_URL || undefined,
       });
 
       const formattedDate = formatMeetingDate(start);
