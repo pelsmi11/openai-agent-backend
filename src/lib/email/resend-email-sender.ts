@@ -5,12 +5,13 @@ import type { EmailSender, SendEmailParams } from './email-sender.js';
 export class ResendEmailSender implements EmailSender {
   private readonly resend = new Resend(CONFIG.RESEND_API_KEY);
 
-  async send({ to, subject, text }: SendEmailParams): Promise<void> {
+  async send({ to, subject, text, html }: SendEmailParams): Promise<void> {
     const { error } = await this.resend.emails.send({
       from: CONFIG.RESEND_FROM_EMAIL,
       to,
       subject,
       text,
+      ...(html ? { html } : {}),
     });
     if (error) {
       throw new Error(`Resend error: ${error.message}`);

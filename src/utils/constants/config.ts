@@ -22,4 +22,9 @@ export const CONFIG = {
   GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID || '',
   GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '',
   GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY || '',
+
+  // Static Meet room (created manually at meet.google.com, doesn't expire from reuse — only
+  // recycled after 365 days of no use at all). A service account can't auto-create a Meet
+  // link per event (see google-calendar-scheduler.ts), so this is the reusable stand-in.
+  GOOGLE_MEET_URL: process.env.GOOGLE_MEET_URL || '',
 };
