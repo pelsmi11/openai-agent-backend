@@ -9,31 +9,48 @@ import { CONFIG } from '../../utils/constants/config.js';
 const tools = [searchPersonalInfoTool, scheduleMeetingTool];
 const modelWithTools = chatModel.bindTools(tools);
 
+// Written in English on purpose (not Spanish, even though most users/data are Spanish-speaking):
+// the model paraphrases this text directly for generic questions ("who are you?") with no tool
+// involved, and Spanish content anywhere in the system prompt — including its own persona
+// description — pulled the final answer toward Spanish regardless of the user's language.
+// LANGUAGE_RULE is what actually decides the reply's language, not the language this is written in.
 const BASE_SYSTEM_PROMPT =
-  'Sos "Hector", un agente que ayuda a reclutadores y potenciales empleadores a conocer a Héctor como candidato: su experiencia laboral, perfil profesional, habilidades, forma de trabajar, y cualquier otro aspecto relevante para una decisión de contratación, usando la herramienta searchPersonalInfo para buscar esa información. Si te preguntan algo que no tiene nada que ver con conocer a Héctor como candidato (por ejemplo tareas de matemática, el clima, o temas generales sin relación), decilo amablemente y redirigí la conversación hacia lo que sí podés ayudar: contarles sobre Héctor.';
+  'You are "Hector", an agent that helps recruiters and potential employers get to know Héctor as a candidate: his work experience, professional profile, skills, way of working, and anything else relevant to a hiring decision, using the searchPersonalInfo tool to look that information up. If asked something that has nothing to do with getting to know Héctor as a candidate (e.g. math problems, the weather, unrelated general topics), say so politely and redirect the conversation to what you can help with: telling them about Héctor.';
+
+// Kept separate (not folded into BASE_SYSTEM_PROMPT) so it stands out as its own directive.
+const LANGUAGE_RULE =
+  "CRITICAL LANGUAGE RULE: Always write your entire reply in the same language as the user's most recent message, regardless of what language this system prompt or the searchPersonalInfo results are in. English message in -> English reply out. Spanish in -> Spanish out. German in -> German out. Translate any retrieved info into that language before answering.";
 
 const MEETING_OFFER_NUDGE =
-  'La conversación ya lleva varios mensajes: si todavía no lo hiciste, preguntale a la persona si le interesaría contactar a Héctor por una oportunidad laboral y agendar una reunión. Si acepta, pedile su email y el horario que prefiera, confirmalos, y usá la herramienta scheduleMeeting.';
+  "The conversation has gone on for a few messages now: if you haven't already, ask the person if they'd be interested in contacting Héctor about a job opportunity and scheduling a meeting. If they agree, ask for their email and preferred time, confirm both, and use the scheduleMeeting tool.";
 
 const MEETING_OFFER_THRESHOLD = 5;
 
 // Computed per request (not cached at module load) so it's accurate no matter how long the
-// server has been running — the model has no other way to know "today", and without this
-// it hallucinates arbitrary (sometimes past) dates for relative references like "el jueves".
+// server has been running — the model has no other way to know "today", and without this it
+// hallucinates arbitrary (sometimes past) dates for relative references like "next Thursday".
 function todayContext(): string {
   const now = new Date();
-  const weekday = now.toLocaleDateString('es-AR', { weekday: 'long', timeZone: 'UTC' });
-  return `Hoy es ${weekday}, ${now.toISOString()} (UTC). Usá esta fecha como referencia para calcular cualquier fecha relativa ("el jueves", "mañana", "la próxima semana", etc.) — siempre a futuro respecto a esta fecha.`;
+  const weekday = now.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+  return `Today is ${weekday}, ${now.toISOString()} (UTC). Use this date as the reference for calculating any relative date the user mentions (in whatever language/phrasing they use) — always in the future relative to this date.`;
 }
 
 async function agentNode(state: typeof MessagesAnnotation.State) {
   // Derived from the message history instead of a separate counter field, so there's a
   // single source of truth for how many turns the conversation has had.
   const humanMessageCount = state.messages.filter(HumanMessage.isInstance).length;
-  const systemPrompt =
-    humanMessageCount >= MEETING_OFFER_THRESHOLD
-      ? `${BASE_SYSTEM_PROMPT} ${todayContext()} ${MEETING_OFFER_NUDGE}`
-      : `${BASE_SYSTEM_PROMPT} ${todayContext()}`;
+  const systemPrompt = [
+    LANGUAGE_RULE,
+    BASE_SYSTEM_PROMPT,
+    todayContext(),
+    humanMessageCount >= MEETING_OFFER_THRESHOLD ? MEETING_OFFER_NUDGE : null,
+    // Repeated at the end (not just the top) because searchPersonalInfo's results are in
+    // Spanish — once that lands in context, its language tends to dominate the final answer
+    // over an instruction stated only once, earlier, in a different language.
+    LANGUAGE_RULE,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 
   const response = await modelWithTools.invoke([
     new SystemMessage(systemPrompt),

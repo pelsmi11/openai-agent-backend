@@ -50,10 +50,13 @@ export const searchPersonalInfoTool = tool(
           },
         ]);
       }
-      return jsonResponse;
+      // The instruction travels with the data, leading it (not trailing, not just in the
+      // system prompt) because once this Spanish content lands in context, its language tends
+      // to dominate the model's final answer regardless of what language the user asked in.
+      return `TRANSLATE THE FOLLOWING SPANISH CONTENT INTO THE USER'S LANGUAGE BEFORE REPLYING. DO NOT ANSWER IN SPANISH UNLESS THE USER WROTE IN SPANISH.\n\n${jsonResponse}`;
     } catch (error) {
       console.error('[searchPersonalInfo] failed:', error);
-      return JSON.stringify({ error: 'No se pudo buscar la información en este momento.' });
+      return JSON.stringify({ error: 'Could not search for the information right now.' });
     }
   },
   {
@@ -203,7 +206,7 @@ export const scheduleMeetingTool = tool(
   async ({ attendee_email, start_datetime, duration_minutes = 30, reason }) => {
     const start = new Date(start_datetime);
     if (Number.isNaN(start.getTime())) {
-      return JSON.stringify({ error: 'La fecha/hora proporcionada no es válida.' });
+      return JSON.stringify({ error: 'The provided date/time is not valid.' });
     }
     const end = new Date(start.getTime() + duration_minutes * 60_000);
     const summary = reason ? `Reunión con Héctor: ${reason}` : 'Reunión con Héctor';
@@ -256,26 +259,26 @@ export const scheduleMeetingTool = tool(
     } catch (error) {
       console.error('[scheduleMeeting] failed:', error);
       return JSON.stringify({
-        error: 'No se pudo agendar la reunión en este momento. Avisale al usuario y ofrecele el contacto directo.',
+        error: 'Could not schedule the meeting right now. Let the user know and offer them direct contact instead.',
       });
     }
   },
   {
     name: 'scheduleMeeting',
     description:
-      'Agenda una reunión con Héctor: crea el evento en su Google Calendar y envía un correo de confirmación con un link para que el interesado agregue el evento a su propio calendario. Solo llamar cuando ya se tenga el email del interesado y la fecha/hora deseada.',
+      "Schedules a meeting with Héctor: creates the event on his Google Calendar and sends a confirmation email with a link for the attendee to add the event to their own calendar. Only call once the attendee's email and desired date/time are known.",
     schema: z.object({
       attendee_email: z
         .string()
         .email()
-        .describe('Email de la persona que quiere reunirse con Héctor'),
+        .describe('Email of the person who wants to meet with Héctor'),
       start_datetime: z
         .string()
         .describe(
-          'Fecha y hora de inicio en formato ISO 8601 con offset de zona horaria, ej. 2026-07-21T15:00:00-05:00',
+          'Start date and time in ISO 8601 format with timezone offset, e.g. 2026-07-21T15:00:00-05:00',
         ),
       duration_minutes: z.number().optional().default(30),
-      reason: z.string().optional().describe('Motivo de la reunión'),
+      reason: z.string().optional().describe('Reason for the meeting'),
     }),
   },
 );
