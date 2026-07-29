@@ -23,6 +23,11 @@ app.get('/', (req: Request, res: Response) => {
   res.send('Express server is running!');
 });
 
+// Health check for frontends/uptime monitors (e.g. Render) to poll
+app.get('/health', (_req: Request, res: Response) => {
+  res.json({ status: 'ok' });
+});
+
 // Mount admin-related routes under /admin (requires a valid ZITADEL bearer token)
 app.use('/admin', requireAuth, adminRoutes);
 // Mount booking-related routes under /booking (public — this is what end users hit to talk to the agent)
