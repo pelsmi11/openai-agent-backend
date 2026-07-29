@@ -27,4 +27,12 @@ export const CONFIG = {
   // recycled after 365 days of no use at all). A service account can't auto-create a Meet
   // link per event (see google-calendar-scheduler.ts), so this is the reusable stand-in.
   GOOGLE_MEET_URL: process.env.GOOGLE_MEET_URL || '',
+
+  // ZITADEL API application (protects this backend's own routes). Auth method: Private Key
+  // JWT — these three come from the downloaded key JSON (clientId, keyId, key) and are used
+  // to sign the client_assertion sent to the token introspection endpoint.
+  ZITADEL_DOMAIN: process.env.ZITADEL_DOMAIN || '',
+  ZITADEL_API_CLIENT_ID: process.env.ZITADEL_API_CLIENT_ID || '',
+  ZITADEL_API_KEY_ID: process.env.ZITADEL_API_KEY_ID || '',
+  ZITADEL_API_PRIVATE_KEY: process.env.ZITADEL_API_PRIVATE_KEY || '',
 };

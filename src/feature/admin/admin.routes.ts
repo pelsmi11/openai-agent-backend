@@ -15,4 +15,8 @@ const router = express.Router();
 router.post('/personal-info', personalInfoController);
 router.get('/search-personal-info', searchPersonalInfoController);
 
+// GET /admin/whoami - reaches here only if requireAuth (mounted in server.ts) already
+// validated the bearer token via ZITADEL introspection. Just for testing the auth setup.
+router.get('/whoami', (_req, res) => res.json({ ok: true }));
+
 export default router;

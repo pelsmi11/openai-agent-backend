@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import adminRoutes from './feature/admin/admin.routes.js';
 import bookingRoutes from './feature/booking/booking.routes.js';
 import { setupAgentGraph } from './feature/booking/agent-graph.js';
+import { requireAuth } from './lib/auth/zitadel-auth.middleware.js';
 
 // Load environment variables from .env file
 // This allows you to use process.env.VARIABLE_NAME throughout your app
@@ -22,9 +23,9 @@ app.get('/', (req: Request, res: Response) => {
   res.send('Express server is running!');
 });
 
-// Mount admin-related routes under /admin
-app.use('/admin', adminRoutes);
-// Mount booking-related routes under /booking
+// Mount admin-related routes under /admin (requires a valid ZITADEL bearer token)
+app.use('/admin', requireAuth, adminRoutes);
+// Mount booking-related routes under /booking (public — this is what end users hit to talk to the agent)
 app.use('/booking', bookingRoutes);
 
 // Create LangGraph's checkpoint tables (idempotent) before accepting requests.
