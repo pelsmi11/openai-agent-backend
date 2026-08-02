@@ -6,7 +6,7 @@ ENV CI=true \
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 FROM base AS deps
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml package.json ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM base AS build
@@ -16,7 +16,7 @@ COPY src ./src
 RUN pnpm run build
 
 FROM base AS prod-deps
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml package.json ./
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 FROM node:22-alpine AS runtime
