@@ -1,4 +1,4 @@
-import express, { type Request, type Response } from 'express';
+import express, { type ErrorRequestHandler, type Request, type Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import adminRoutes from './feature/admin/admin.routes.js';
@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 3000;
 // Enable CORS for all routes (allows cross-origin requests)
 app.use(cors());
 // Parse incoming JSON requests
-app.use(express.json());
+app.use(express.json({ limit: '16kb' }));
 
 // Health check endpoint
 app.get('/', (req: Request, res: Response) => {
@@ -32,6 +32,17 @@ app.get('/health', (_req: Request, res: Response) => {
 app.use('/admin', requireAuth, adminRoutes);
 // Mount booking-related routes under /booking (public — this is what end users hit to talk to the agent)
 app.use('/booking', bookingRoutes);
+
+const jsonErrorHandler: ErrorRequestHandler = (error, _req, res, next) => {
+  if (error instanceof SyntaxError && 'body' in error) {
+    res.status(400).json({
+      error: { code: 'INVALID_JSON', message: 'The request body must contain valid JSON.' },
+    });
+    return;
+  }
+  next(error);
+};
+app.use(jsonErrorHandler);
 
 // Create LangGraph's checkpoint tables (idempotent) before accepting requests.
 await setupAgentGraph();

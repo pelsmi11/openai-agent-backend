@@ -16,6 +16,7 @@ export const chatModel = new ChatOpenAI({
   model: CONFIG.AI_GATEWAY_CHAT_MODEL,
   configuration: gatewayConfiguration,
   maxRetries: 2,
+  temperature: 0,
 });
 
 export const embeddingsModel = new OpenAIEmbeddings({

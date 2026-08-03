@@ -1,45 +1,33 @@
 import { z } from 'zod';
 import { tool } from '@langchain/core/tools';
-import { pgPool } from '../../lib/pg/client.js';
-import { getEmbedding } from './openai-embedding.util.js';
 import { EMBEDDING_SEARCH_DEFAULTS } from '../../utils/constants/dafultvalues.js';
+import { searchPersonalInfo } from './personal-info-search.service.js';
 import { calendarScheduler } from '../../lib/calendar/index.js';
 import { emailSender } from '../../lib/email/index.js';
 import { CONFIG } from '../../utils/constants/config.js';
 
 /**
  * Searches personal information about Hector by semantic similarity (pgvector).
- * Embeds the question and queries the match_personal_info Postgres function.
+ * Embeds the question and queries the cosine-similarity personal-info search service.
  */
 export const searchPersonalInfoTool = tool(
   async ({
     question,
-    match_threshold = EMBEDDING_SEARCH_DEFAULTS.match_threshold,
+    min_similarity = EMBEDDING_SEARCH_DEFAULTS.min_similarity,
     match_count = EMBEDDING_SEARCH_DEFAULTS.match_count,
   }) => {
     try {
-      const embedding = await getEmbedding(question);
-
-      const sql = `
-        SELECT *
-        FROM match_personal_info(
-            $1,  -- embedding (vector/array)
-            $2,  -- match_threshold
-            $3   -- match_count
-        );
-        `;
-      const embeddingStr = `[${embedding.join(',')}]`;
-      const result = await pgPool.query(sql, [
-        embeddingStr,
-        match_threshold,
-        match_count,
-      ]);
+      const result = await searchPersonalInfo(question, {
+        minSimilarity: min_similarity,
+        matchCount: match_count,
+      });
 
       // Limit the response size to avoid exceeding 10KB
-      const resultsfined = result.rows.map((row) => ({
+      const resultsfined = result.map((row) => ({
         id: row.id,
         content: row.content,
         category: row.category,
+        similarity: row.similarity,
       }));
       const jsonResponse = JSON.stringify(resultsfined);
       if (jsonResponse.length > 10_000) {
@@ -64,12 +52,17 @@ export const searchPersonalInfoTool = tool(
     description: 'Searches personal information about Hector by semantic similarity',
     schema: z.object({
       question: z.string().describe('The user question about Hector'),
-      match_threshold: z
+      min_similarity: z
         .number()
+        .min(0)
+        .max(1)
         .optional()
-        .default(EMBEDDING_SEARCH_DEFAULTS.match_threshold),
+        .default(EMBEDDING_SEARCH_DEFAULTS.min_similarity),
       match_count: z
         .number()
+        .int()
+        .min(1)
+        .max(20)
         .optional()
         .default(EMBEDDING_SEARCH_DEFAULTS.match_count),
     }),

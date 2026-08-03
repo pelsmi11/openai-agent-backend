@@ -1,5 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { runAgent, streamAgent } from './agent-graph.js';
+import { runAgent, type AgentRunResult } from './agent-graph.js';
+import type { AnswerPart, PublicSource } from './agent-response.js';
+
+export interface AskToHectorResponse {
+  reply: string;
+  conversationId: string;
+  answerParts: AnswerPart[];
+  sources: PublicSource[];
+}
 
 /**
  * Calls the Hector agent (LangGraph) with the user's message. Conversation history and the
@@ -13,10 +21,10 @@ import { runAgent, streamAgent } from './agent-graph.js';
 export async function askToHector(
   message: string,
   conversationId?: string,
-): Promise<{ reply: string; conversationId: string }> {
+): Promise<AskToHectorResponse> {
   const threadId = conversationId || randomUUID();
-  const reply = await runAgent(message, threadId);
-  return { reply, conversationId: threadId };
+  const result = await runAgent(message, threadId);
+  return { ...result, conversationId: threadId };
 }
 
 /**
@@ -27,7 +35,18 @@ export async function askToHector(
 export function askToHectorStream(
   message: string,
   conversationId?: string,
-): { conversationId: string; tokens: AsyncGenerator<string> } {
+): {
+  conversationId: string;
+  tokens: AsyncGenerator<string>;
+  result: Promise<AgentRunResult>;
+} {
   const threadId = conversationId || randomUUID();
-  return { conversationId: threadId, tokens: streamAgent(message, threadId) };
+  const result = runAgent(message, threadId);
+
+  async function* tokens(): AsyncGenerator<string> {
+    const completed = await result;
+    for (const chunk of completed.reply.match(/\S+\s*/g) ?? [completed.reply]) yield chunk;
+  }
+
+  return { conversationId: threadId, tokens: tokens(), result };
 }

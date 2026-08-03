@@ -1,4 +1,4 @@
 export const EMBEDDING_SEARCH_DEFAULTS = {
-  match_threshold: 0.9999,
-  match_count: 10,
+  min_similarity: 0.625,
+  match_count: 5,
 };

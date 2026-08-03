@@ -1,0 +1,51 @@
+[
+  {"id":"simple-01","bucket":"simple","message":"¿Cuál es el cargo actual de Héctor y en qué institución trabaja?","minAnswerParts":1,"requiredFactGroups":[["programador sénior","desarrollador sénior"],["ministerio público"]]},
+  {"id":"simple-02","bucket":"simple","message":"¿A cuántos usuarios atienden los sistemas institucionales donde trabaja Héctor?","minAnswerParts":1,"requiredFactGroups":[["13,000","13000","13 mil"]]},
+  {"id":"simple-03","bucket":"simple","message":"¿Cuántos microservicios ha desarrollado Héctor?","minAnswerParts":1,"requiredFactGroups":[["25"]]},
+  {"id":"simple-04","bucket":"simple","message":"¿Cuántos sistemas importantes ha migrado Héctor?","minAnswerParts":1,"requiredFactGroups":[["tres","3"]]},
+  {"id":"simple-05","bucket":"simple","message":"¿Qué carrera universitaria estudió Héctor?","minAnswerParts":1,"requiredFactGroups":[["ingeniería en sistemas","sistemas de información"]]},
+  {"id":"simple-06","bucket":"simple","message":"¿Héctor ya está certificado en AWS?","minAnswerParts":1,"requiredFactGroups":[["prepar","estudi"],["saa-c03","solutions architect"]]},
+  {"id":"simple-07","bucket":"simple","message":"¿Cuál es el nivel de inglés documentado de Héctor?","minAnswerParts":1,"requiredFactGroups":[["b1","intermedio"]]},
+  {"id":"simple-08","bucket":"simple","message":"¿Qué experiencia de liderazgo técnico tiene Héctor?","minAnswerParts":1,"requiredFactGroups":[["dirección tecnológica","distribuyendo tareas","decisiones"]]},
+  {"id":"simple-09","bucket":"simple","message":"¿Tiene experiencia práctica construyendo sistemas RAG?","minAnswerParts":1,"requiredFactGroups":[["rag"],["langchain","embeddings"]]},
+  {"id":"simple-10","bucket":"simple","message":"¿Qué objetivo de cobertura de pruebas busca Héctor?","minAnswerParts":1,"requiredFactGroups":[["90"]]},
+
+  {"id":"compound-01","bucket":"compound","message":"Indica por separado cuántos sistemas migró, cuántos microservicios desarrolló y a cuántos usuarios sirven sus sistemas.","minAnswerParts":3,"requiredFactGroups":[["tres","3"],["25"],["13,000","13000","13 mil"]]},
+  {"id":"compound-02","bucket":"compound","message":"Para Node.js, Java y AWS, separa experiencia demostrada y datos no documentados.","minAnswerParts":3},
+  {"id":"compound-03","bucket":"compound","message":"Resume por separado su puesto actual, su experiencia en Génesis Empresarial y su trabajo con sistemas judiciales.","minAnswerParts":3,"requiredFactGroups":[["ministerio público"],["génesis"],["judicial","denuncias"]]},
+  {"id":"compound-04","bucket":"compound","message":"Dime por separado su educación universitaria, certificaciones terminadas y certificación AWS en preparación.","minAnswerParts":3},
+  {"id":"compound-05","bucket":"compound","message":"¿Cómo ha usado S3, SQS, Lambda y Rekognition? Responde cada servicio por separado.","minAnswerParts":4,"requiredFactGroups":[["s3"],["sqs"],["lambda"],["rekognition"]]},
+  {"id":"compound-06","bucket":"compound","message":"Describe por separado su liderazgo técnico, participación en contrataciones y experiencia de mentoría.","minAnswerParts":3},
+  {"id":"compound-07","bucket":"compound","message":"Evalúa por separado su experiencia frontend, backend y bases de datos.","minAnswerParts":3},
+  {"id":"compound-08","bucket":"compound","message":"Explica por separado su experiencia en AWS, Google Cloud y contenedores.","minAnswerParts":3},
+  {"id":"compound-09","bucket":"compound","message":"Explica por separado su experiencia con RAG, visión artificial y agentes de programación.","minAnswerParts":3},
+  {"id":"compound-10","bucket":"compound","message":"¿Qué evidencia existe por separado sobre escala de usuarios, seguridad y continuidad operativa?","minAnswerParts":3},
+
+  {"id":"negative-01","bucket":"negative","message":"¿Cuál es el salario actual y la expectativa salarial de Héctor?","minAnswerParts":2,"expectAllNotDocumented":true},
+  {"id":"negative-02","bucket":"negative","message":"¿Qué edad exacta tiene Héctor?","minAnswerParts":1,"expectAllNotDocumented":true},
+  {"id":"negative-03","bucket":"negative","message":"¿Cuál es el estado civil de Héctor?","minAnswerParts":1,"expectAllNotDocumented":true},
+  {"id":"negative-04","bucket":"negative","message":"¿Cuál es la dirección residencial exacta de Héctor?","minAnswerParts":1,"expectAllNotDocumented":true},
+  {"id":"negative-05","bucket":"negative","message":"¿Cuál es la comida favorita de Héctor?","minAnswerParts":1,"expectAllNotDocumented":true},
+  {"id":"negative-06","bucket":"negative","message":"¿Tiene Héctor alguna condición médica?","minAnswerParts":1,"expectAllNotDocumented":true},
+
+  {"id":"ambiguous-01","bucket":"ambiguous","message":"¿Es Héctor un experto certificado en AWS? Distingue lo demostrado de lo que no está documentado.","minAnswerParts":2},
+  {"id":"ambiguous-02","bucket":"ambiguous","message":"¿Puede garantizarse que Héctor dirigió equipos de más de 50 personas?","minAnswerParts":1,"expectAllNotDocumented":true},
+  {"id":"ambiguous-03","bucket":"ambiguous","message":"¿Cuántos años exactos de experiencia tiene con Java?","minAnswerParts":1,"expectAllNotDocumented":true},
+  {"id":"ambiguous-04","bucket":"ambiguous","message":"¿Cuántas contribuciones aceptadas tiene en proyectos open source?","minAnswerParts":1,"expectAllNotDocumented":true},
+
+  {"id":"recruiter-01","bucket":"recruiter","message":"Evalúalo para Senior Backend Engineer: fortalezas demostradas, brechas documentales y tres preguntas de entrevista.","minAnswerParts":3},
+  {"id":"recruiter-02","bucket":"recruiter","message":"Evalúalo para Cloud Architect: evidencia AWS, nivel de certificación y brechas.","minAnswerParts":3},
+  {"id":"recruiter-03","bucket":"recruiter","message":"Evalúalo para Tech Lead: liderazgo, contratación técnica y aspectos no documentados.","minAnswerParts":3},
+  {"id":"recruiter-04","bucket":"recruiter","message":"Evalúalo para AI Engineer: RAG, visión artificial y límites de la evidencia.","minAnswerParts":3},
+  {"id":"recruiter-05","bucket":"recruiter","message":"Evalúalo para Frontend Lead: React, Next.js y liderazgo de equipos.","minAnswerParts":3},
+  {"id":"recruiter-06","bucket":"recruiter","message":"Evalúalo para un equipo internacional: nivel técnico, inglés y experiencia internacional.","minAnswerParts":3},
+
+  {"id":"language-01","bucket":"language","message":"What documented experience does Hector have with React, and what is his exact salary? Answer each point separately.","minAnswerParts":2,"requiredFactGroups":[["react"],["I do not have that information documented"]],"forbiddenPhrases":["No tengo ese dato documentado","Non dispongo di questa informazione","Diese Information ist nicht dokumentiert","Je ne dispose pas de cette information"]},
+  {"id":"language-02","bucket":"language","message":"Welche dokumentierte Erfahrung hat Héctor mit React, und wie hoch ist sein genaues Gehalt? Antworte auf jeden Punkt getrennt.","minAnswerParts":2,"requiredFactGroups":[["react"],["Diese Information ist nicht dokumentiert"]],"forbiddenPhrases":["No tengo ese dato documentado","I do not have that information documented","Non dispongo di questa informazione","Je ne dispose pas de cette information"]},
+  {"id":"language-03","bucket":"language","message":"Quelle expérience documentée Héctor possède-t-il avec React, et quel est son salaire exact ? Répondez à chaque point séparément.","minAnswerParts":2,"requiredFactGroups":[["react"],["Je ne dispose pas de cette information documentée"]],"forbiddenPhrases":["No tengo ese dato documentado","I do not have that information documented","Non dispongo di questa informazione","Diese Information ist nicht dokumentiert"]},
+  {"id":"language-04","bucket":"language","message":"Quale esperienza documentata ha Héctor con React e qual è il suo stipendio esatto? Rispondi a ogni punto separatamente.","minAnswerParts":2,"requiredFactGroups":[["react"],["Non dispongo di questa informazione documentata"]],"forbiddenPhrases":["No tengo ese dato documentado","I do not have that information documented","Diese Information ist nicht dokumentiert","Je ne dispose pas de cette information"]},
+  {"id":"language-05","bucket":"language","message":"¿Qué experiencia documentada tiene Héctor con React y cuál es su salario exacto? Responde cada punto por separado.","minAnswerParts":2,"requiredFactGroups":[["react"],["No tengo ese dato documentado"]],"forbiddenPhrases":["I do not have that information documented","Non dispongo di questa informazione","Diese Information ist nicht dokumentiert","Je ne dispose pas de cette information"]},
+
+  {"id":"nudge-01","bucket":"nudge","turns":["¿Cuál es su cargo actual?","¿Qué tecnologías usa?","¿Ha trabajado con bases de datos?","¿Tiene liderazgo?","¿Qué experiencia tiene con testing?","Resume sus fortalezas."],"expectNoMeetingOffer":true},
+  {"id":"nudge-02","bucket":"nudge","turns":["Tell me about Hector's backend work.","What about frontend?","What databases has he used?","Does he know cloud?","What leadership evidence exists?","Summarize only the documented evidence."],"expectNoMeetingOffer":true}
+]

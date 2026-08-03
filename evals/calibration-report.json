@@ -1,0 +1,464 @@
+{
+  "generatedAt": "2026-08-03T02:04:46.823Z",
+  "cases": 12,
+  "selected": {
+    "minSimilarity": 0.625,
+    "precision": 0.2894736842105263,
+    "recallAt5": 0.9166666666666666,
+    "f1": 0.43999999999999995
+  },
+  "measurements": [
+    {
+      "minSimilarity": 0.5,
+      "precision": 0.2033898305084746,
+      "recallAt5": 1,
+      "f1": 0.33802816901408456
+    },
+    {
+      "minSimilarity": 0.525,
+      "precision": 0.20689655172413793,
+      "recallAt5": 1,
+      "f1": 0.34285714285714286
+    },
+    {
+      "minSimilarity": 0.55,
+      "precision": 0.2037037037037037,
+      "recallAt5": 0.9166666666666666,
+      "f1": 0.3333333333333333
+    },
+    {
+      "minSimilarity": 0.575,
+      "precision": 0.23404255319148937,
+      "recallAt5": 0.9166666666666666,
+      "f1": 0.3728813559322034
+    },
+    {
+      "minSimilarity": 0.6,
+      "precision": 0.2558139534883721,
+      "recallAt5": 0.9166666666666666,
+      "f1": 0.4
+    },
+    {
+      "minSimilarity": 0.625,
+      "precision": 0.2894736842105263,
+      "recallAt5": 0.9166666666666666,
+      "f1": 0.43999999999999995
+    },
+    {
+      "minSimilarity": 0.65,
+      "precision": 0.30303030303030304,
+      "recallAt5": 0.8333333333333334,
+      "f1": 0.4444444444444444
+    },
+    {
+      "minSimilarity": 0.675,
+      "precision": 0.32142857142857145,
+      "recallAt5": 0.75,
+      "f1": 0.45000000000000007
+    },
+    {
+      "minSimilarity": 0.7,
+      "precision": 0.4,
+      "recallAt5": 0.6666666666666666,
+      "f1": 0.5
+    },
+    {
+      "minSimilarity": 0.725,
+      "precision": 0.6363636363636364,
+      "recallAt5": 0.5833333333333334,
+      "f1": 0.6086956521739131
+    },
+    {
+      "minSimilarity": 0.75,
+      "precision": 0.8333333333333334,
+      "recallAt5": 0.4166666666666667,
+      "f1": 0.5555555555555556
+    },
+    {
+      "minSimilarity": 0.775,
+      "precision": 0.8,
+      "recallAt5": 0.3333333333333333,
+      "f1": 0.47058823529411764
+    },
+    {
+      "minSimilarity": 0.8,
+      "precision": 1,
+      "recallAt5": 0.08333333333333333,
+      "f1": 0.15384615384615385
+    },
+    {
+      "minSimilarity": 0.825,
+      "precision": 0,
+      "recallAt5": 0,
+      "f1": 0
+    },
+    {
+      "minSimilarity": 0.85,
+      "precision": 0,
+      "recallAt5": 0,
+      "f1": 0
+    },
+    {
+      "minSimilarity": 0.875,
+      "precision": 0,
+      "recallAt5": 0,
+      "f1": 0
+    },
+    {
+      "minSimilarity": 0.9,
+      "precision": 0,
+      "recallAt5": 0,
+      "f1": 0
+    }
+  ],
+  "diagnostics": [
+    {
+      "query": "¿Cuántos microservicios ha desarrollado Héctor?",
+      "expectedSourceIds": [
+        "9051ad96-bde7-4513-800c-5cff8635df67"
+      ],
+      "top5": [
+        {
+          "id": "9051ad96-bde7-4513-800c-5cff8635df67",
+          "similarity": 0.7873855183985801
+        },
+        {
+          "id": "f6eed865-45a6-40dc-9846-d90e1ad3aa87",
+          "similarity": 0.6503550897262604
+        },
+        {
+          "id": "7cb2c7ea-4de8-41d7-8a14-eece3f5ade08",
+          "similarity": 0.647259303504337
+        },
+        {
+          "id": "e5824af8-c01d-4a80-8929-20315ff4b4a7",
+          "similarity": 0.6209943948231577
+        },
+        {
+          "id": "1000f0b8-2b15-4e35-bdc9-bdce26d42bbd",
+          "similarity": 0.6116847421290228
+        }
+      ],
+      "missingExpectedIds": []
+    },
+    {
+      "query": "¿A cuántos usuarios atienden los sistemas donde trabaja Héctor Martínez?",
+      "expectedSourceIds": [
+        "8f19fb60-6933-474a-984b-fc4ba5e48a53"
+      ],
+      "top5": [
+        {
+          "id": "0e22e794-b67a-4991-97b4-ef7a637ea78a",
+          "similarity": 0.7334461624890316
+        },
+        {
+          "id": "0c007417-a37f-4c37-8c12-c16d0fe72db5",
+          "similarity": 0.7197138135544292
+        },
+        {
+          "id": "8f19fb60-6933-474a-984b-fc4ba5e48a53",
+          "similarity": 0.694855112750686
+        },
+        {
+          "id": "9051ad96-bde7-4513-800c-5cff8635df67",
+          "similarity": 0.6944315931626216
+        },
+        {
+          "id": "e5824af8-c01d-4a80-8929-20315ff4b4a7",
+          "similarity": 0.6926844310410694
+        }
+      ],
+      "missingExpectedIds": []
+    },
+    {
+      "query": "¿Cuántos sistemas importantes migró Héctor Martínez?",
+      "expectedSourceIds": [
+        "28b748ac-daae-4140-af21-2caa9ff1369a"
+      ],
+      "top5": [
+        {
+          "id": "28b748ac-daae-4140-af21-2caa9ff1369a",
+          "similarity": 0.6687303903820673
+        },
+        {
+          "id": "0c007417-a37f-4c37-8c12-c16d0fe72db5",
+          "similarity": 0.6494372343336797
+        },
+        {
+          "id": "7cb2c7ea-4de8-41d7-8a14-eece3f5ade08",
+          "similarity": 0.6064416923104291
+        },
+        {
+          "id": "e5824af8-c01d-4a80-8929-20315ff4b4a7",
+          "similarity": 0.6005914579549237
+        },
+        {
+          "id": "0e22e794-b67a-4991-97b4-ef7a637ea78a",
+          "similarity": 0.5944224429358621
+        }
+      ],
+      "missingExpectedIds": []
+    },
+    {
+      "query": "¿Héctor Martínez está certificado en AWS?",
+      "expectedSourceIds": [
+        "1528a264-60d8-4582-84ed-de1a24361658"
+      ],
+      "top5": [
+        {
+          "id": "9952ff2d-28b9-4682-b68c-a95c8b6d0837",
+          "similarity": 0.794677101946517
+        },
+        {
+          "id": "1528a264-60d8-4582-84ed-de1a24361658",
+          "similarity": 0.7819591776251699
+        },
+        {
+          "id": "a7a42e5d-7ecd-4246-9702-2b0ef2ff2e3e",
+          "similarity": 0.7123996028690991
+        },
+        {
+          "id": "e4cc766e-8068-4fa8-b806-18fb62647b51",
+          "similarity": 0.6724460745705266
+        },
+        {
+          "id": "f6eed865-45a6-40dc-9846-d90e1ad3aa87",
+          "similarity": 0.6714945027908266
+        }
+      ],
+      "missingExpectedIds": []
+    },
+    {
+      "query": "¿Dónde obtuvo Héctor Martínez el título de Ingeniería en Sistemas de Información y Ciencias de la Computación?",
+      "expectedSourceIds": [
+        "527fb2bf-634d-4fdd-a370-3fb85c454e67"
+      ],
+      "top5": [
+        {
+          "id": "e5824af8-c01d-4a80-8929-20315ff4b4a7",
+          "similarity": 0.5833591481782948
+        },
+        {
+          "id": "f6eed865-45a6-40dc-9846-d90e1ad3aa87",
+          "similarity": 0.5797630220543641
+        },
+        {
+          "id": "6584ba6c-bfeb-4b2e-a42a-8f2de85276e6",
+          "similarity": 0.5553757320112838
+        },
+        {
+          "id": "7cb2c7ea-4de8-41d7-8a14-eece3f5ade08",
+          "similarity": 0.5306974560337452
+        },
+        {
+          "id": "527fb2bf-634d-4fdd-a370-3fb85c454e67",
+          "similarity": 0.5260906958501975
+        }
+      ],
+      "missingExpectedIds": []
+    },
+    {
+      "query": "¿Cuál es el nivel de inglés documentado de Héctor Martínez?",
+      "expectedSourceIds": [
+        "ed696281-9d97-46bc-ab63-b97e12af7973"
+      ],
+      "top5": [
+        {
+          "id": "ed696281-9d97-46bc-ab63-b97e12af7973",
+          "similarity": 0.7352014834066939
+        },
+        {
+          "id": "0288f765-e06f-404c-a9d1-b8297314b2bc",
+          "similarity": 0.6210539551587385
+        },
+        {
+          "id": "7cb2c7ea-4de8-41d7-8a14-eece3f5ade08",
+          "similarity": 0.564022382230651
+        },
+        {
+          "id": "f6eed865-45a6-40dc-9846-d90e1ad3aa87",
+          "similarity": 0.555188462946131
+        },
+        {
+          "id": "b51c5b15-244b-4d50-a797-a01010b5813e",
+          "similarity": 0.5454991297759318
+        }
+      ],
+      "missingExpectedIds": []
+    },
+    {
+      "query": "¿Qué liderazgo técnico ha ejercido Héctor Martínez?",
+      "expectedSourceIds": [
+        "6584ba6c-bfeb-4b2e-a42a-8f2de85276e6"
+      ],
+      "top5": [
+        {
+          "id": "6584ba6c-bfeb-4b2e-a42a-8f2de85276e6",
+          "similarity": 0.7948156504155534
+        },
+        {
+          "id": "511971a3-b1b3-4b1c-92cf-49f29599cac4",
+          "similarity": 0.7388470913617807
+        },
+        {
+          "id": "2633f12a-c016-4941-961d-31cdd6a26446",
+          "similarity": 0.722760485364045
+        },
+        {
+          "id": "f6eed865-45a6-40dc-9846-d90e1ad3aa87",
+          "similarity": 0.7006371585473659
+        },
+        {
+          "id": "7cb2c7ea-4de8-41d7-8a14-eece3f5ade08",
+          "similarity": 0.6974169288765935
+        }
+      ],
+      "missingExpectedIds": []
+    },
+    {
+      "query": "¿Héctor Martínez ha participado en contratación de desarrolladores?",
+      "expectedSourceIds": [
+        "889a4a19-5076-4e71-8fa2-674df7be5b18"
+      ],
+      "top5": [
+        {
+          "id": "889a4a19-5076-4e71-8fa2-674df7be5b18",
+          "similarity": 0.8109859135271033
+        },
+        {
+          "id": "b53090e3-f176-4218-9e7b-415c351cd8b3",
+          "similarity": 0.7380451413326903
+        },
+        {
+          "id": "511971a3-b1b3-4b1c-92cf-49f29599cac4",
+          "similarity": 0.7149270376789328
+        },
+        {
+          "id": "f6eed865-45a6-40dc-9846-d90e1ad3aa87",
+          "similarity": 0.7046153971236578
+        },
+        {
+          "id": "8f388c7a-f2af-4969-993f-efc81ceae72a",
+          "similarity": 0.6959150695012071
+        }
+      ],
+      "missingExpectedIds": []
+    },
+    {
+      "query": "¿Héctor Martínez tiene experiencia creando sistemas RAG?",
+      "expectedSourceIds": [
+        "922683bd-84e3-4033-82f3-6e44d34db21d"
+      ],
+      "top5": [
+        {
+          "id": "922683bd-84e3-4033-82f3-6e44d34db21d",
+          "similarity": 0.7131830746575767
+        },
+        {
+          "id": "914b467d-1260-4b71-9293-e1103a046f3d",
+          "similarity": 0.6857693756076207
+        },
+        {
+          "id": "9b3ce595-5e88-4816-9bbd-bcf0eba6fd61",
+          "similarity": 0.6514178969817791
+        },
+        {
+          "id": "b51c5b15-244b-4d50-a797-a01010b5813e",
+          "similarity": 0.6333468442598545
+        },
+        {
+          "id": "edf7bfa8-ab5a-4e55-b0cb-770927d5ae40",
+          "similarity": 0.6267635135241528
+        }
+      ],
+      "missingExpectedIds": []
+    },
+    {
+      "query": "¿Qué cobertura de pruebas busca alcanzar Héctor Martínez?",
+      "expectedSourceIds": [
+        "63cad6c3-ea41-4f88-a259-52c1979305b4"
+      ],
+      "top5": [
+        {
+          "id": "63cad6c3-ea41-4f88-a259-52c1979305b4",
+          "similarity": 0.6460344485718278
+        },
+        {
+          "id": "7cb2c7ea-4de8-41d7-8a14-eece3f5ade08",
+          "similarity": 0.5791673648018419
+        },
+        {
+          "id": "a4a45b64-ac5e-48e5-a88f-7cd5827bbb79",
+          "similarity": 0.570708014912812
+        },
+        {
+          "id": "889a4a19-5076-4e71-8fa2-674df7be5b18",
+          "similarity": 0.5543419407568749
+        },
+        {
+          "id": "f6eed865-45a6-40dc-9846-d90e1ad3aa87",
+          "similarity": 0.5539174040374221
+        }
+      ],
+      "missingExpectedIds": []
+    },
+    {
+      "query": "¿En qué institución trabaja actualmente Héctor Martínez como Programador Sénior?",
+      "expectedSourceIds": [
+        "8f388c7a-f2af-4969-993f-efc81ceae72a"
+      ],
+      "top5": [
+        {
+          "id": "8f388c7a-f2af-4969-993f-efc81ceae72a",
+          "similarity": 0.7294747299751845
+        },
+        {
+          "id": "e5824af8-c01d-4a80-8929-20315ff4b4a7",
+          "similarity": 0.7201720080086137
+        },
+        {
+          "id": "b53090e3-f176-4218-9e7b-415c351cd8b3",
+          "similarity": 0.710272347463751
+        },
+        {
+          "id": "889a4a19-5076-4e71-8fa2-674df7be5b18",
+          "similarity": 0.6952298573135599
+        },
+        {
+          "id": "f6eed865-45a6-40dc-9846-d90e1ad3aa87",
+          "similarity": 0.6871514735325326
+        }
+      ],
+      "missingExpectedIds": []
+    },
+    {
+      "query": "¿Cómo diseñó el procesamiento asíncrono de fotografías en AWS?",
+      "expectedSourceIds": [
+        "0bdde165-25b5-46fe-841d-4fbf3aa626fe"
+      ],
+      "top5": [
+        {
+          "id": "0bdde165-25b5-46fe-841d-4fbf3aa626fe",
+          "similarity": 0.7507084449410907
+        },
+        {
+          "id": "be55be6c-3747-4ae9-8c4c-269a4083bb40",
+          "similarity": 0.5722164373089553
+        },
+        {
+          "id": "1ea641d2-d5cd-4787-b7b3-418f354ccee4",
+          "similarity": 0.5459650300937067
+        },
+        {
+          "id": "e4cc766e-8068-4fa8-b806-18fb62647b51",
+          "similarity": 0.5194438052171587
+        },
+        {
+          "id": "c7fc4452-7a74-4430-9662-a594b9ed9f4a",
+          "similarity": 0.49387332900066716
+        }
+      ],
+      "missingExpectedIds": []
+    }
+  ]
+}

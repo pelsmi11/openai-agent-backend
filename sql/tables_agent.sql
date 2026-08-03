@@ -12,16 +12,16 @@ CREATE TABLE personal_info (
 
 CREATE INDEX personal_info_embedding_hnsw
   ON personal_info
-  USING hnsw (embedding vector_l2_ops);
+  USING hnsw (embedding vector_cosine_ops);
 
 
   select * from personal_info;
   select content, category from personal_info;
 
 
- create or replace function match_personal_info(
+ create or replace function search_personal_info(
   query_embedding vector(1536),
-  match_threshold float,
+  min_similarity float,
   match_count int
 )
 returns table (
@@ -40,7 +40,7 @@ as $$
     created_at,
     1 - (embedding <=> query_embedding) as similarity
   from personal_info
-  where embedding <=> query_embedding < match_threshold
+  where 1 - (embedding <=> query_embedding) >= min_similarity
     and visibility = true
   order by embedding <=> query_embedding
   limit match_count;
@@ -48,7 +48,7 @@ $$;
  
 
  select *
-from match_personal_info(
+from search_personal_info(
   '[
                 -0.034725275,
                 -0.010740241,
@@ -1587,6 +1587,6 @@ from match_personal_info(
                 0.041742533,
                 0.0035763197
             ]'::vector(1536), -- pass the query embedding
-  0.99999, -- chose an appropriate threshold for your data
+  0.625, -- calibrated minimum cosine similarity
   10 -- choose the number of matches
 );

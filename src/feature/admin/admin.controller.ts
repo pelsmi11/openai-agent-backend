@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { EMBEDDING_SEARCH_DEFAULTS } from '../../utils/constants/dafultvalues.js';
 import {
   createPersonalInfo,
   findSimilarPersonalInfo,
@@ -34,17 +35,28 @@ export const personalInfoController = async (req: Request, res: Response) => {
  * @param res - The Express response object.
  */
 export const searchPersonalInfoController = async (req: Request, res: Response) => {
-  const { q, count, threshold } = req.query;
+  const { q, count, minSimilarity, threshold } = req.query;
   if (!q) {
     return res.status(400).json({ error: 'q (query) is required' });
   }
   const matchCount = count ? parseInt(count as string, 10) : 3;
-  const matchThreshold = threshold ? parseFloat(threshold as string) : 0.9999;
+  // `threshold` remains a one-release compatibility alias, now with explicit
+  // minimum-similarity semantics just like `minSimilarity`.
+  const similarityValue = minSimilarity ?? threshold;
+  const minimumSimilarity = similarityValue
+    ? parseFloat(similarityValue as string)
+    : EMBEDDING_SEARCH_DEFAULTS.min_similarity;
+  if (!Number.isInteger(matchCount) || matchCount < 1 || matchCount > 20) {
+    return res.status(400).json({ error: 'count must be an integer between 1 and 20' });
+  }
+  if (!Number.isFinite(minimumSimilarity) || minimumSimilarity < 0 || minimumSimilarity > 1) {
+    return res.status(400).json({ error: 'minSimilarity must be between 0 and 1' });
+  }
   try {
     const results = await findSimilarPersonalInfo(
       q as string,
       matchCount,
-      matchThreshold,
+      minimumSimilarity,
     );
     res.json(results);
   } catch (error) {

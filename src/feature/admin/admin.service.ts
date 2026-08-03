@@ -1,5 +1,7 @@
 import { pgPool } from '../../lib/pg/client.js';
+import { EMBEDDING_SEARCH_DEFAULTS } from '../../utils/constants/dafultvalues.js';
 import { getEmbedding } from '../booking/openai-embedding.util.js';
+import { searchPersonalInfo } from '../booking/personal-info-search.service.js';
 
 export interface PersonalInfoEntry {
   id: string;
@@ -47,6 +49,7 @@ export interface SimilarPersonalInfoResult {
   id?: string;
   content: string;
   category?: string | null;
+  similarity?: number;
 }
 
 /**
@@ -60,32 +63,17 @@ export interface SimilarPersonalInfoResult {
 export async function findSimilarPersonalInfo(
   queryText: string,
   matchCount = 3,
-  matchThreshold = 0.9999,
+  minSimilarity = EMBEDDING_SEARCH_DEFAULTS.min_similarity,
 ): Promise<SimilarPersonalInfoResult[]> {
   try {
-    const embedding = await getEmbedding(queryText);
-
-    // Query the database for similar entries using the match_personal_info function
-    const sql = `
-            SELECT *
-            FROM match_personal_info(
-                $1,  -- embedding (vector/array)
-                $2,  -- match_threshold
-                $3   -- match_count
-            );
-            `;
-    const embeddingStr = `[${embedding.join(',')}]`;
-    const result = await pgPool.query(sql, [
-      embeddingStr,
-      matchThreshold, // threshold (float)
-      matchCount, // count (integer)
-    ]);
+    const result = await searchPersonalInfo(queryText, { minSimilarity, matchCount });
 
     // Limit the response size to avoid exceeding 10KB
-    const resultsfined = result.rows.map((row) => ({
+    const resultsfined = result.map((row) => ({
       id: row.id,
-      content: row.content, // Adjust as needed
+      content: row.content,
       category: row.category,
+      similarity: row.similarity,
     }));
     const jsonResponse = JSON.stringify(resultsfined);
     if (jsonResponse.length > 10_000) {
