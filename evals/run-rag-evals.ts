@@ -46,6 +46,7 @@ async function ask(message: string, conversationId?: string): Promise<ApiRespons
 }
 
 async function runCase(testCase: EvalCase) {
+  const startedAt = performance.now();
   const replies: ApiResponse[] = [];
   let conversationId: string | undefined;
   for (const message of testCase.turns ?? [testCase.message ?? '']) {
@@ -86,6 +87,7 @@ async function runCase(testCase: EvalCase) {
   return {
     id: testCase.id,
     bucket: testCase.bucket,
+    durationMs: Math.round(performance.now() - startedAt),
     passed: failures.length === 0,
     failures,
     ...(failures.length > 0
@@ -100,12 +102,14 @@ async function worker() {
   while (nextIndex < cases.length) {
     const index = nextIndex++;
     const testCase = cases[index]!;
+    const startedAt = performance.now();
     try {
       results[index] = await runCase(testCase);
     } catch (error) {
       results[index] = {
         id: testCase.id,
         bucket: testCase.bucket,
+        durationMs: Math.round(performance.now() - startedAt),
         passed: false,
         failures: [error instanceof Error ? error.message : String(error)],
       };
@@ -115,5 +119,18 @@ async function worker() {
 
 await Promise.all([worker(), worker()]);
 const failed = results.filter((result) => !result.passed);
-console.log(JSON.stringify({ total: results.length, passed: results.length - failed.length, failed }, null, 2));
+const durations = results.map((result) => result.durationMs).sort((a, b) => a - b);
+const percentile = (value: number) =>
+  durations[Math.min(durations.length - 1, Math.max(0, Math.ceil(durations.length * value) - 1))] ?? 0;
+console.log(JSON.stringify({
+  total: results.length,
+  passed: results.length - failed.length,
+  passRate: results.length === 0 ? 0 : (results.length - failed.length) / results.length,
+  latencyMs: {
+    p50: percentile(0.5),
+    p95: percentile(0.95),
+    average: durations.length === 0 ? 0 : Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length),
+  },
+  failed,
+}, null, 2));
 if (failed.length > 0) process.exitCode = 1;

@@ -13,6 +13,17 @@ export const CONFIG = {
   AI_GATEWAY_BASE_URL:
     process.env.AI_GATEWAY_BASE_URL || 'https://ai-gateway.vercel.sh/v1',
   AI_GATEWAY_CHAT_MODEL: process.env.AI_GATEWAY_CHAT_MODEL || 'openai/gpt-4o-mini',
+  AI_GATEWAY_PLANNING_MODEL:
+    process.env.AI_GATEWAY_PLANNING_MODEL ||
+    process.env.AI_GATEWAY_CHAT_MODEL ||
+    'openai/gpt-4o-mini',
+  AI_GATEWAY_SYNTHESIS_MODEL:
+    process.env.AI_GATEWAY_SYNTHESIS_MODEL ||
+    'openai/gpt-5.4-mini',
+  AI_GATEWAY_MEETING_MODEL:
+    process.env.AI_GATEWAY_MEETING_MODEL ||
+    process.env.AI_GATEWAY_SYNTHESIS_MODEL ||
+    'openai/gpt-5.4-mini',
   AI_GATEWAY_EMBEDDING_MODEL:
     process.env.AI_GATEWAY_EMBEDDING_MODEL || 'openai/text-embedding-3-small',
 

@@ -66,6 +66,58 @@ describe('validateAnswerPayload', () => {
     expect(result.sources).toEqual([]);
   });
 
+  it('turns claims about missing evidence into not_documented', () => {
+    const result = validateAnswerPayload(
+      ['¿Cuál es la edad exacta?'],
+      [
+        {
+          questionIndex: 0,
+          answer: 'No se especifica la edad exacta.',
+          claims: [
+            {
+              text: 'No se especifica la edad exacta en las fuentes.',
+              evidenceLevel: 'mentioned',
+              sourceIds: ['related'],
+            },
+          ],
+        },
+      ],
+      [evidence('related', 0, 'Experiencia profesional de Héctor Martínez.')],
+      'es',
+    );
+
+    expect(result.answerParts[0]).toMatchObject({
+      status: 'not_documented',
+      answer: 'No tengo ese dato documentado.',
+      claims: [],
+    });
+    expect(result.sources).toEqual([]);
+  });
+
+  it('rejects numeric answers when the requested number is absent from cited evidence', () => {
+    const result = validateAnswerPayload(
+      ['¿Dirigió equipos de más de 50 personas?'],
+      [
+        {
+          questionIndex: 0,
+          answer: 'Tiene liderazgo técnico y mentoría.',
+          claims: [
+            {
+              text: 'Tiene liderazgo técnico y mentoría.',
+              evidenceLevel: 'demonstrated',
+              sourceIds: ['leadership'],
+            },
+          ],
+        },
+      ],
+      [evidence('leadership', 0, 'Distribuyó tareas y realizó mentoría técnica.')],
+      'es',
+    );
+
+    expect(result.answerParts[0]?.status).toBe('not_documented');
+    expect(result.sources).toEqual([]);
+  });
+
   it('downgrades domain without explicit mastery or two independent sources', () => {
     const result = validateAnswerPayload(
       ['Node.js'],

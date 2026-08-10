@@ -5,6 +5,7 @@ import adminRoutes from './feature/admin/admin.routes.js';
 import bookingRoutes from './feature/booking/booking.routes.js';
 import { setupAgentGraph } from './feature/booking/agent-graph.js';
 import { requireAuth } from './lib/auth/zitadel-auth.middleware.js';
+import { CONFIG } from './utils/constants/config.js';
 
 // Load environment variables from .env file
 // This allows you to use process.env.VARIABLE_NAME throughout your app
@@ -25,7 +26,15 @@ app.get('/', (req: Request, res: Response) => {
 
 // Health check for frontends/uptime monitors (e.g. Render) to poll
 app.get('/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok' });
+  res.json({
+    status: 'ok',
+    models: {
+      planning: CONFIG.AI_GATEWAY_PLANNING_MODEL,
+      synthesis: CONFIG.AI_GATEWAY_SYNTHESIS_MODEL,
+      meeting: CONFIG.AI_GATEWAY_MEETING_MODEL,
+      embedding: CONFIG.AI_GATEWAY_EMBEDDING_MODEL,
+    },
+  });
 });
 
 // Mount admin-related routes under /admin (requires a valid ZITADEL bearer token)
@@ -50,4 +59,10 @@ await setupAgentGraph();
 // Start the server and listen on the specified port
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
+  console.log('[models]', {
+    planning: CONFIG.AI_GATEWAY_PLANNING_MODEL,
+    synthesis: CONFIG.AI_GATEWAY_SYNTHESIS_MODEL,
+    meeting: CONFIG.AI_GATEWAY_MEETING_MODEL,
+    embedding: CONFIG.AI_GATEWAY_EMBEDDING_MODEL,
+  });
 });

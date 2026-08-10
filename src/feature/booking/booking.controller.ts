@@ -59,6 +59,11 @@ export const askToHectorStreamController = async (req: Request, res: Response) =
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
+  res.write(': connected\n\n');
+
+  const keepAlive = setInterval(() => {
+    res.write(': keepalive\n\n');
+  }, 5_000);
 
   const { conversationId: threadId, tokens, result } = askToHectorStream(
     input.message,
@@ -86,6 +91,7 @@ export const askToHectorStreamController = async (req: Request, res: Response) =
       })}\n\n`,
     );
   } finally {
+    clearInterval(keepAlive);
     res.end();
   }
 };

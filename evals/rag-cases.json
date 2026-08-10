@@ -1,6 +1,6 @@
 [
   {"id":"simple-01","bucket":"simple","message":"¿Cuál es el cargo actual de Héctor y en qué institución trabaja?","minAnswerParts":1,"requiredFactGroups":[["programador sénior","desarrollador sénior"],["ministerio público"]]},
-  {"id":"simple-02","bucket":"simple","message":"¿A cuántos usuarios atienden los sistemas institucionales donde trabaja Héctor?","minAnswerParts":1,"requiredFactGroups":[["13,000","13000","13 mil"]]},
+  {"id":"simple-02","bucket":"simple","message":"¿A cuántos usuarios atienden los sistemas institucionales donde trabaja Héctor?","minAnswerParts":1,"requiredFactGroups":[["13,000","13.000","13000","13 mil"]]},
   {"id":"simple-03","bucket":"simple","message":"¿Cuántos microservicios ha desarrollado Héctor?","minAnswerParts":1,"requiredFactGroups":[["25"]]},
   {"id":"simple-04","bucket":"simple","message":"¿Cuántos sistemas importantes ha migrado Héctor?","minAnswerParts":1,"requiredFactGroups":[["tres","3"]]},
   {"id":"simple-05","bucket":"simple","message":"¿Qué carrera universitaria estudió Héctor?","minAnswerParts":1,"requiredFactGroups":[["ingeniería en sistemas","sistemas de información"]]},
@@ -10,7 +10,7 @@
   {"id":"simple-09","bucket":"simple","message":"¿Tiene experiencia práctica construyendo sistemas RAG?","minAnswerParts":1,"requiredFactGroups":[["rag"],["langchain","embeddings"]]},
   {"id":"simple-10","bucket":"simple","message":"¿Qué objetivo de cobertura de pruebas busca Héctor?","minAnswerParts":1,"requiredFactGroups":[["90"]]},
 
-  {"id":"compound-01","bucket":"compound","message":"Indica por separado cuántos sistemas migró, cuántos microservicios desarrolló y a cuántos usuarios sirven sus sistemas.","minAnswerParts":3,"requiredFactGroups":[["tres","3"],["25"],["13,000","13000","13 mil"]]},
+  {"id":"compound-01","bucket":"compound","message":"Indica por separado cuántos sistemas migró, cuántos microservicios desarrolló y a cuántos usuarios sirven sus sistemas.","minAnswerParts":3,"requiredFactGroups":[["tres","3"],["25"],["13,000","13.000","13000","13 mil"]]},
   {"id":"compound-02","bucket":"compound","message":"Para Node.js, Java y AWS, separa experiencia demostrada y datos no documentados.","minAnswerParts":3},
   {"id":"compound-03","bucket":"compound","message":"Resume por separado su puesto actual, su experiencia en Génesis Empresarial y su trabajo con sistemas judiciales.","minAnswerParts":3,"requiredFactGroups":[["ministerio público"],["génesis"],["judicial","denuncias"]]},
   {"id":"compound-04","bucket":"compound","message":"Dime por separado su educación universitaria, certificaciones terminadas y certificación AWS en preparación.","minAnswerParts":3},

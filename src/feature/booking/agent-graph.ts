@@ -8,7 +8,11 @@ import {
   type BaseMessage,
 } from '@langchain/core/messages';
 import { z } from 'zod';
-import { chatModel } from '../../lib/ai-gateway/models.js';
+import {
+  meetingChatModel,
+  planningChatModel,
+  synthesisChatModel,
+} from '../../lib/ai-gateway/models.js';
 import { CONFIG } from '../../utils/constants/config.js';
 import { scheduleMeetingTool } from './agent-tools.js';
 import {
@@ -60,16 +64,17 @@ const IntentSchema = z.object({
   responseLanguage: z.enum(SUPPORTED_RESPONSE_LANGUAGES),
 });
 
+const QuestionSchema = z.object({
+  question: z.string().trim().min(1),
+  retrievalQuery: z.string().trim().min(1),
+});
+
+const RequestPlanSchema = IntentSchema.extend({
+  questions: z.array(QuestionSchema).max(5),
+});
+
 const DecompositionSchema = z.object({
-  questions: z
-    .array(
-      z.object({
-        question: z.string().trim().min(1),
-        retrievalQuery: z.string().trim().min(1),
-      }),
-    )
-    .min(1)
-    .max(5),
+  questions: z.array(QuestionSchema).min(1).max(5),
 });
 
 const DraftAnswerSchema = z.object({
@@ -88,14 +93,16 @@ const DraftAnswerSchema = z.object({
   ),
 });
 
-const intentModel = chatModel.withStructuredOutput(IntentSchema, { name: 'classify_intent' });
-const decompositionModel = chatModel.withStructuredOutput(DecompositionSchema, {
+const requestPlanningModel = planningChatModel.withStructuredOutput(RequestPlanSchema, {
+  name: 'plan_candidate_request',
+});
+const decompositionModel = planningChatModel.withStructuredOutput(DecompositionSchema, {
   name: 'decompose_candidate_question',
 });
-const synthesisModel = chatModel.withStructuredOutput(DraftAnswerSchema, {
+const synthesisModel = synthesisChatModel.withStructuredOutput(DraftAnswerSchema, {
   name: 'synthesize_grounded_answer',
 });
-const meetingModel = chatModel.bindTools([scheduleMeetingTool]);
+const meetingModel = meetingChatModel.bindTools([scheduleMeetingTool]);
 
 function messageText(message: BaseMessage | undefined): string {
   if (!message) return '';
@@ -117,19 +124,31 @@ function recentConversation(state: typeof StateAnnotation.State): string {
 
 async function classifyIntent(state: typeof StateAnnotation.State) {
   const latestMessage = messageText(latestHumanMessage(state));
-  const result = await intentModel.invoke([
+  const result = await requestPlanningModel.invoke([
     new SystemMessage(
-      'Classify the latest request. candidate_profile means any question explicitly naming Héctor Martínez, including private or unsupported facts that may not be documented, plus professional questions that are implicitly about him in this portfolio context (skills, scale, security, continuity, experience, evaluation). meeting means an explicit request to schedule or a continuation that supplies meeting details. out_of_scope is only for requests clearly unrelated to Héctor or his professional profile. Use the recent conversation to resolve short follow-ups. Never classify as meeting merely because several messages have been exchanged. Also set responseLanguage to the language used by the latest user message: es for Spanish, en for English, it for Italian, de for German, or fr for French. If the latest message contains only language-neutral data such as an email, date, URL, or technology name, preserve the language of the most recent substantive user message. If a message mixes languages, choose its dominant language or the language it explicitly requests. Never infer responseLanguage from assistant messages or retrieved evidence.',
+      'Classify and plan the latest request in one pass. candidate_profile means any question explicitly naming Héctor Martínez, including private or unsupported facts that may not be documented, plus professional questions that are implicitly about him in this portfolio context (skills, scale, security, continuity, experience, evaluation). meeting means an explicit request to schedule or a continuation that supplies meeting details. out_of_scope is only for requests clearly unrelated to Héctor or his professional profile. Use the recent conversation to resolve short follow-ups. Never classify as meeting merely because several messages have been exchanged. Set responseLanguage to the language used by the latest user message: es for Spanish, en for English, it for Italian, de for German, or fr for French. If the latest message contains only language-neutral data such as an email, date, URL, or technology name, preserve the language of the most recent substantive user message. If a message mixes languages, choose its dominant language or the language it explicitly requests. Never infer responseLanguage from assistant messages or retrieved evidence. For candidate_profile, also return 1 to 5 self-contained questions that preserve every requested point in order. Each user-visible question must use responseLanguage. Each retrievalQuery is internal, must be written in Spanish for the Spanish-language corpus, explicitly name Héctor Martínez, and add only useful professional synonyms without assuming the answer. For meeting or out_of_scope return an empty questions array.',
     ),
     new HumanMessage(recentConversation(state)),
   ]);
   const explicitlyAboutHector = /\bh[eé]ctor\b/i.test(latestMessage);
+  const intent =
+    result.intent === 'out_of_scope' && explicitlyAboutHector
+      ? ('candidate_profile' as const)
+      : result.intent;
+  const plannedQuestions = normalizeQuestions(result.questions, latestMessage);
+  const explicitlyCompound =
+    /[,;:]|\b(?:y|and|und|et|e)\b|por separado|separately|separatamente|séparément|getrennt|einzeln|distingue|distinguish|distingui|distinguer|unterscheide/i.test(
+      latestMessage,
+    );
   return {
-    intent:
-      result.intent === 'out_of_scope' && explicitlyAboutHector
-        ? ('candidate_profile' as const)
-        : result.intent,
+    intent,
     responseLanguage: result.responseLanguage,
+    subQuestions:
+      intent === 'candidate_profile'
+        ? explicitlyCompound
+          ? plannedQuestions
+          : plannedQuestions.slice(0, 1)
+        : [],
   };
 }
 
@@ -142,13 +161,6 @@ async function decomposeQuestion(state: typeof StateAnnotation.State) {
   const languageRule = strictLanguageInstruction(state.responseLanguage);
   const decompositionPrompt =
     `Decompose the user request into 1 to 5 self-contained questions. ${languageRule} For every item, question is user-visible and must use TARGET_LANGUAGE; retrievalQuery is internal and must be written in Spanish for the Spanish-language corpus, explicitly name Héctor Martínez, and add only useful professional synonyms such as education/title/university or current role/position/employer without assuming the answer. Preserve every requested fact, comparison, uncertainty, and recruiter criterion in the original order. When the user enumerates N distinct items or asks to answer separately, return exactly N items. A simple request must remain one item. Do not add answer targets the user did not request.`;
-  let result = await decompositionModel.invoke([
-    new SystemMessage(
-      decompositionPrompt,
-    ),
-    new HumanMessage(userQuestion),
-  ]);
-
   const firstSentence = userQuestion.split('?')[0] ?? userQuestion;
   const enumeratedCount = /por separado|separately|separatamente|séparément|getrennt|einzeln/i.test(userQuestion)
     ? firstSentence.split(/,\s*|\s+(?:y|and|e|et|und)\s+/i).length
@@ -156,31 +168,40 @@ async function decomposeQuestion(state: typeof StateAnnotation.State) {
   const expectedMinimum = /distingue|distinguish|distingui|distinguer|unterscheide/i.test(userQuestion)
     ? Math.max(2, enumeratedCount)
     : enumeratedCount;
-  if (result.questions.length < expectedMinimum) {
-    result = await decompositionModel.invoke([
+  let questions = state.subQuestions;
+  if (questions.length < expectedMinimum) {
+    const result = await decompositionModel.invoke([
       new SystemMessage(
         `${decompositionPrompt} The request below contains ${expectedMinimum} distinct answer targets. Return exactly ${expectedMinimum} items; do not merge them. ${languageRule}`,
       ),
       new HumanMessage(userQuestion),
     ]);
+    questions = normalizeQuestions(result.questions, userQuestion);
   }
-  if (result.questions.length < expectedMinimum && /cada\s+\w+\s+por separado/i.test(userQuestion)) {
+  if (questions.length < expectedMinimum && /cada\s+\w+\s+por separado/i.test(userQuestion)) {
     const enumeratedNames = [...new Set(firstSentence.match(/\b[A-Z][A-Za-z0-9.-]{1,}\b/g) ?? [])];
     if (enumeratedNames.length === expectedMinimum) {
-      result = {
-        questions: enumeratedNames.map((name) => ({
+      questions = normalizeQuestions(
+        enumeratedNames.map((name) => ({
           question: `¿Cómo ha usado ${name} Héctor Martínez?`,
           retrievalQuery: `Uso documentado de ${name} por Héctor Martínez en proyectos y arquitectura`,
         })),
-      };
+        userQuestion,
+      );
     }
   }
+  return { subQuestions: questions };
+}
 
-  const uniqueQuestions = result.questions.filter(
+function normalizeQuestions(
+  rawQuestions: Array<{ question: string; retrievalQuery: string }>,
+  userQuestion: string,
+): SubQuestion[] {
+  const uniqueQuestions = rawQuestions.filter(
     (item, index, items) =>
       items.findIndex((candidate) => candidate.question.trim() === item.question.trim()) === index,
   );
-  const questions = (
+  return (
     uniqueQuestions.length > 0
       ? uniqueQuestions
       : [{ question: userQuestion, retrievalQuery: `Héctor Martínez ${userQuestion}` }]
@@ -189,7 +210,6 @@ async function decomposeQuestion(state: typeof StateAnnotation.State) {
     question: item.question.trim(),
     retrievalQuery: item.retrievalQuery.trim(),
   }));
-  return { subQuestions: questions };
 }
 
 function dispatchRetrievals(state: typeof StateAnnotation.State) {
@@ -305,7 +325,7 @@ async function synthesizeAnswer(state: typeof StateAnnotation.State) {
 async function respondOutOfScope(state: typeof StateAnnotation.State) {
   const userMessage = messageText(latestHumanMessage(state));
   const languageRule = strictLanguageInstruction(state.responseLanguage);
-  const response = await chatModel.invoke([
+  const response = await planningChatModel.invoke([
     new SystemMessage(
       `Politely explain that you can only answer questions about Héctor Martínez as a professional candidate or help with an explicitly requested meeting. ${languageRule} Keep the response to two sentences and do not offer a meeting unless the user asked for one. Before returning, rewrite any mixed-language text.`,
     ),
