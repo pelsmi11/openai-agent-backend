@@ -1,6 +1,10 @@
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { askToHector, askToHectorStream } from './booking.service.js';
+import {
+  detectResponseLanguage,
+  progressMessageForLanguage,
+} from './response-language.js';
 
 export const AskToHectorRequestSchema = z.object({
   message: z.string().trim().min(1).max(2_000),
@@ -58,8 +62,20 @@ export const askToHectorStreamController = async (req: Request, res: Response) =
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
   res.write(': connected\n\n');
+
+  const responseLanguage = detectResponseLanguage(input.message);
+  res.write(
+    `data: ${JSON.stringify({
+      status: {
+        phase: 'retrieving',
+        language: responseLanguage,
+        message: progressMessageForLanguage(responseLanguage),
+      },
+    })}\n\n`,
+  );
 
   const keepAlive = setInterval(() => {
     res.write(': keepalive\n\n');
@@ -81,6 +97,8 @@ export const askToHectorStreamController = async (req: Request, res: Response) =
         conversationId: threadId,
         answerParts: completed.answerParts,
         sources: completed.sources,
+        responseLanguage: completed.responseLanguage,
+        responseKind: completed.responseKind,
       })}\n\n`,
     );
   } catch (error) {

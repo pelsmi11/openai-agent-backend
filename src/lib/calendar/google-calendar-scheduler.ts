@@ -42,7 +42,15 @@ export class GoogleCalendarScheduler implements CalendarScheduler {
     });
 
     return {
+      bookingId: data.id ?? '',
       eventLink: data.htmlLink ?? '',
     };
+  }
+
+  async cancelMeeting(bookingId: string): Promise<void> {
+    await this.calendar.events.delete({
+      calendarId: CONFIG.GOOGLE_CALENDAR_ID,
+      eventId: bookingId,
+    });
   }
 }

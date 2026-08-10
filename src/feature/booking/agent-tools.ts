@@ -196,7 +196,13 @@ function buildConfirmationEmailHtml({
  * attendee's email and their preferred date/time are known.
  */
 export const scheduleMeetingTool = tool(
-  async ({ attendee_email, start_datetime, duration_minutes = 30, reason }) => {
+  async ({ attendee_email, start_datetime, duration_minutes = 30, reason, confirmed }) => {
+    if (confirmed !== true) {
+      return JSON.stringify({
+        confirmed: false,
+        error: 'Explicit user confirmation is required before scheduling.',
+      });
+    }
     const start = new Date(start_datetime);
     if (Number.isNaN(start.getTime())) {
       return JSON.stringify({ error: 'The provided date/time is not valid.' });
@@ -204,14 +210,17 @@ export const scheduleMeetingTool = tool(
     const end = new Date(start.getTime() + duration_minutes * 60_000);
     const summary = reason ? `Reunión con Héctor: ${reason}` : 'Reunión con Héctor';
 
+    let bookingId = '';
     try {
-      const { eventLink } = await calendarScheduler.createMeeting({
+      const meeting = await calendarScheduler.createMeeting({
         summary,
         description: reason,
         startISO: start.toISOString(),
         endISO: end.toISOString(),
         attendeeEmail: attendee_email,
       });
+      bookingId = meeting.bookingId;
+      if (!bookingId) throw new Error('Calendar provider did not return a booking id');
 
       const addToCalendarLink = buildAddToCalendarLink({
         summary,
@@ -230,21 +239,29 @@ export const scheduleMeetingTool = tool(
         emailLines.push(`Unite por Google Meet: ${CONFIG.GOOGLE_MEET_URL}`);
       }
 
-      await emailSender.send({
-        to: attendee_email,
-        subject: 'Confirmación de tu reunión con Héctor',
-        text: emailLines.join('\n'),
-        html: buildConfirmationEmailHtml({
-          summary,
-          formattedDate,
-          addToCalendarLink,
-          meetUrl: CONFIG.GOOGLE_MEET_URL || undefined,
-        }),
-      });
+      try {
+        await emailSender.send({
+          to: attendee_email,
+          subject: 'Confirmación de tu reunión con Héctor',
+          text: emailLines.join('\n'),
+          html: buildConfirmationEmailHtml({
+            summary,
+            formattedDate,
+            addToCalendarLink,
+            meetUrl: CONFIG.GOOGLE_MEET_URL || undefined,
+          }),
+        });
+      } catch (emailError) {
+        await calendarScheduler.cancelMeeting(bookingId).catch((compensationError) => {
+          console.error('[scheduleMeeting] failed to compensate calendar event:', compensationError);
+        });
+        throw emailError;
+      }
 
       return JSON.stringify({
         confirmed: true,
-        eventLink,
+        bookingId,
+        eventLink: meeting.eventLink,
         addToCalendarLink,
         meetUrl: CONFIG.GOOGLE_MEET_URL || undefined,
         start: start.toISOString(),
@@ -259,8 +276,9 @@ export const scheduleMeetingTool = tool(
   {
     name: 'scheduleMeeting',
     description:
-      "Schedules a meeting with Héctor: creates the event on his Google Calendar and sends a confirmation email with a link for the attendee to add the event to their own calendar. Only call once the attendee's email and desired date/time are known.",
+      "Schedules a meeting with Héctor after the user explicitly confirms the summarized booking details. Creates the event on his Google Calendar and sends a confirmation email. Only call when the latest user message explicitly confirms and every required field is known.",
     schema: z.object({
+      confirmed: z.literal(true).describe('Must be true only after explicit user confirmation'),
       attendee_email: z
         .string()
         .email()

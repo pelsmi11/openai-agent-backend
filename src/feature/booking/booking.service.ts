@@ -1,12 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { runAgent, type AgentRunResult } from './agent-graph.js';
 import type { AnswerPart, PublicSource } from './agent-response.js';
+import type { SupportedResponseLanguage } from './response-language.js';
 
 export interface AskToHectorResponse {
   reply: string;
   conversationId: string;
   answerParts: AnswerPart[];
   sources: PublicSource[];
+  responseLanguage: SupportedResponseLanguage;
+  responseKind: AgentRunResult['responseKind'];
 }
 
 /**
@@ -45,7 +48,13 @@ export function askToHectorStream(
 
   async function* tokens(): AsyncGenerator<string> {
     const completed = await result;
-    for (const chunk of completed.reply.match(/\S+\s*/g) ?? [completed.reply]) yield chunk;
+    const chunks = completed.reply.match(/(?:\S+\s*){1,6}/g) ?? [completed.reply];
+    for (const chunk of chunks) {
+      yield chunk;
+      // Give the SSE transport an event-loop turn to flush each visible phrase instead of
+      // collapsing the entire answer into one network frame.
+      await new Promise((resolve) => setTimeout(resolve, 15));
+    }
   }
 
   return { conversationId: threadId, tokens: tokens(), result };

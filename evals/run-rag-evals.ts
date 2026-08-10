@@ -10,6 +10,8 @@ interface EvalCase {
   forbiddenPhrases?: string[];
   expectAllNotDocumented?: boolean;
   expectNoMeetingOffer?: boolean;
+  expectedLanguage?: 'es' | 'en' | 'it' | 'de' | 'fr';
+  expectedResponseKind?: 'candidate_profile' | 'meeting' | 'out_of_scope';
 }
 
 interface ApiResponse {
@@ -20,6 +22,8 @@ interface ApiResponse {
     claims: Array<{ sourceIds: string[] }>;
   }>;
   sources: Array<{ id: string }>;
+  responseLanguage: 'es' | 'en' | 'it' | 'de' | 'fr';
+  responseKind: 'candidate_profile' | 'meeting' | 'out_of_scope';
 }
 
 const baseUrl = process.env.EVAL_BASE_URL ?? 'http://localhost:3000';
@@ -62,6 +66,12 @@ async function runCase(testCase: EvalCase) {
   if (testCase.expectAllNotDocumented && response.answerParts.some((part) => part.status !== 'not_documented')) {
     failures.push('expected every answerPart to be not_documented');
   }
+  if (testCase.expectedLanguage && response.responseLanguage !== testCase.expectedLanguage) {
+    failures.push(`expected responseLanguage ${testCase.expectedLanguage}, received ${response.responseLanguage}`);
+  }
+  if (testCase.expectedResponseKind && response.responseKind !== testCase.expectedResponseKind) {
+    failures.push(`expected responseKind ${testCase.expectedResponseKind}, received ${response.responseKind}`);
+  }
   const normalizedReply = normalize(response.reply);
   for (const alternatives of testCase.requiredFactGroups ?? []) {
     if (!alternatives.some((fact) => normalizedReply.includes(normalize(fact)))) {
@@ -80,8 +90,8 @@ async function runCase(testCase: EvalCase) {
   if (citedIds.some((id) => !publicIds.has(id))) failures.push('claim cites a source absent from sources');
   if (testCase.expectNoMeetingOffer) {
     const allText = normalize(replies.map((item) => item.reply).join('\n'));
-    if (/\b(agendar|agenda|reunion|meeting|schedule)\b/.test(allText)) {
-      failures.push('agent offered or mentioned a meeting without explicit intent');
+    if (/(?:agendar|programar|reservar)\s+(?:una\s+)?reunion|(?:schedule|book|set up)\s+(?:a\s+)?meeting|would you like\s+(?:me\s+)?to\s+(?:schedule|book)|te gustaria\s+agendar/.test(allText)) {
+      failures.push('agent offered a meeting without explicit intent');
     }
   }
   return {

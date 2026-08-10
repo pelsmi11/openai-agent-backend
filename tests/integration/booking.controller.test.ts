@@ -31,6 +31,8 @@ describe('booking controllers', () => {
       conversationId: '2ee59962-901a-4a2b-9d4e-25ed301f5180',
       answerParts: [],
       sources: [],
+      responseLanguage: 'es',
+      responseKind: 'candidate_profile',
     });
     const response = await request(app)
       .post('/booking/ask-to-hector')
@@ -53,7 +55,13 @@ describe('booking controllers', () => {
       yield 'Hola ';
       yield 'mundo';
     }
-    const result = Promise.resolve({ reply: 'Hola mundo', answerParts: [], sources: [] });
+    const result = Promise.resolve({
+      reply: 'Hola mundo',
+      answerParts: [],
+      sources: [],
+      responseLanguage: 'es' as const,
+      responseKind: 'candidate_profile' as const,
+    });
     mocks.stream.mockReturnValue({
       conversationId: '2ee59962-901a-4a2b-9d4e-25ed301f5180',
       tokens: tokens(),
@@ -64,7 +72,9 @@ describe('booking controllers', () => {
       .send({ message: 'Hola' })
       .expect(200);
     expect(response.text).toContain('"token":"Hola "');
+    expect(response.text).toContain('"phase":"retrieving"');
     expect(response.text).toContain('"done":true');
     expect(response.text).toContain('"answerParts":[]');
+    expect(response.text).toContain('"responseLanguage":"es"');
   });
 });

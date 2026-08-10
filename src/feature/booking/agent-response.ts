@@ -44,8 +44,21 @@ export interface DraftAnswerPart {
 
 const EXPLICIT_DOMAIN_LANGUAGE =
   /\b(domina|dominio|experto|experta|expertise|mastery|proficient|proficiency)\b/i;
+const DEMONSTRATED_LANGUAGE =
+  /\b(?:desarroll\w*|implement\w*|lider\w*|disen\w*|cre(?:o|ando|ated?)\w*|migr\w*|optimiz\w*|manten\w*|integr\w*|utiliz\w*|us(?:o|ed)\w*|trabaj\w*|particip\w*|gestion\w*|supervis\w*|resolv\w*|constru\w*|configur\w*|despleg\w*|automatiz\w*|develop\w*|led|built|designed|migrated|maintain\w*|worked|managed|deployed|svilupp\w*|lavor\w*|guid\w*|entwick\w*|gearbeit\w*|geleitet|developp\w*|travaill\w*|dirig\w*)\b/i;
+const REQUESTS_DEMONSTRATED =
+  /\b(?:demostrad[ao]s?|demonstrated|dimostrat[aoe]?|nachgewiesen\w*|demontree?s?)\b/i;
+const PRIVATE_OR_UNDOCUMENTED_QUESTION =
+  /\b(?:salario|expectativa salarial|sueldo|edad exacta|estado civil|direcci[oó]n residencial|domicilio exacto|comida favorita|condici[oó]n m[eé]dica|salary|exact age|marital status|home address|residential address|favorite food|medical condition|stipendio|indirizzo di casa|stato civile|gehalt|wohnadresse|familienstand|salaire|adresse personnelle|état civil)\b/i;
 const ABSENCE_CLAIM_LANGUAGE =
-  /\b(?:no\s+(?:se\s+)?(?:especific\w*|indic\w*|inclu\w*|document\w*|mencion\w*|dispon\w*|consta\w*)|las\s+fuentes\s+no|la\s+evidencia\s+no|not\s+documented|does\s+not\s+(?:specify|indicate|include|mention)|no\s+evidence|sources?\s+do(?:es)?\s+not|nicht\s+dokumentiert|nicht\s+angegeben|keine\s+(?:angabe|evidenz)|non\s+(?:documentato|specificato|indicato)|nessuna\s+evidenza|pas\s+document\w*|non\s+indique|aucune\s+preuve)\b/i;
+  /\b(?:no\s+(?:se\s+)?(?:especific\w*|indic\w*|inclu\w*|document\w*|mencion\w*|dispon\w*|consta\w*|proporcion\w*|facilit\w*|detall\w*|revel\w*|public\w*)|no\s+hay|las\s+fuentes\s+no|la\s+evidencia\s+no|not\s+documented|does\s+not\s+(?:specify|indicate|include|mention|provide)|has\s+not|no\s+evidence|sources?\s+do(?:es)?\s+not|nicht\s+dokumentiert|nicht\s+angegeben|noch\s+nicht|keine\s+(?:angabe|evidenz)|non\s+(?:(?:e|è)\s+)?(?:documentato|specificato|indicato)|non\s+(?:sono\s+)?indicat\w*|non\s+ha|nessuna\s+evidenza|pas\s+document\w*|non\s+indique|aucune\s+preuve|n['’]\s*a\s+pas|n['’]\s*est\s+pas|ne\s+\w+\s+pas)\b/i;
+
+const QUESTION_STOPWORDS = new Set([
+  'hector', 'martinez', 'what', 'which', 'where', 'does', 'have', 'with', 'about',
+  'answer', 'only', 'separately', 'que', 'cual', 'como', 'donde', 'tiene', 'responde',
+  'solo', 'separado', 'quale', 'quali', 'dove', 'rispondi', 'welche', 'welchen',
+  'antwort', 'quel', 'quelle', 'quelles', 'reponds', 'uniquement',
+]);
 
 function normalized(value: string): string {
   return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
@@ -61,6 +74,52 @@ function numericAnchors(value: string): string[] {
   return [...new Set((value.match(/\b\d[\d.,]*\b/g) ?? []).map((number) => number.replace(/\D/g, '')))];
 }
 
+function relevantTerms(value: string): string[] {
+  return normalized(value)
+    .replace(/[^a-z0-9\s.-]/g, ' ')
+    .split(/\s+/)
+    .filter((term) => term.length >= 4 && !QUESTION_STOPWORDS.has(term));
+}
+
+function claimTargetsQuestion(question: string, claim: string): boolean {
+  const normalizedQuestion = normalized(question);
+  const normalizedClaim = normalized(claim);
+  if (/\betl\b/.test(normalizedQuestion) && /\betl\b/.test(normalizedClaim)) return true;
+  if (
+    /base(?:s)? de datos|database|datenbank|banca dati|base de donnees/.test(normalizedQuestion) &&
+    /base(?:s)? de datos|database|datenbank|banca dati|base de donnees|sql server|postgres|mysql|mongodb|data warehouse/.test(normalizedClaim)
+  ) return true;
+  if (
+    /empleador|empresa|compania|institucion|compan(?:y|ies)|azienda|entreprise|unternehmen|trabaj|worked|lavor|travaill|gearbeit/.test(normalizedQuestion) &&
+    /ministerio|fundacion|genesis|justice|sociedad|institucion|organizacion|compan|empresa|azienda|entreprise|unternehmen|trabaj|worked|lavor|travaill|gearbeit/.test(normalizedClaim)
+  ) return true;
+
+  const questionTerms = relevantTerms(question);
+  if (questionTerms.length === 0) return true;
+  const claimTerms = relevantTerms(claim);
+  return questionTerms.some((questionTerm) =>
+    claimTerms.some((claimTerm) =>
+      questionTerm.slice(0, 5) === claimTerm.slice(0, 5),
+    ),
+  );
+}
+
+function canonicalizeOfficialNames(value: string, sourceRows: IndexedRetrievalResult[]): string {
+  let result = value;
+  const sourceText = sourceRows.map((row) => row.content).join('\n');
+  if (sourceText.includes('Ministerio Público')) {
+    result = result.replace(
+      /Minist\p{L}*\s+P[uú]blic\p{L}*(?:\s+(?:de|di|du|von)\s+Guatemala)?/giu,
+      'Ministerio Público de Guatemala',
+    );
+    result = result.replace(
+      /(?:the\s+)?Public Prosecutor['’]s Office(?:\s+of\s+Guatemala)?/giu,
+      'Ministerio Público de Guatemala',
+    );
+  }
+  return result;
+}
+
 export function validateAnswerPayload(
   questions: string[],
   drafts: DraftAnswerPart[],
@@ -68,15 +127,25 @@ export function validateAnswerPayload(
   responseLanguage: SupportedResponseLanguage,
 ): Pick<AgentAnswer, 'answerParts' | 'sources'> {
   const answerParts: AnswerPart[] = questions.map((question, questionIndex) => {
+    if (PRIVATE_OR_UNDOCUMENTED_QUESTION.test(normalized(question))) {
+      return {
+        question,
+        status: 'not_documented',
+        answer: missingAnswerForLanguage(responseLanguage),
+        claims: [],
+      };
+    }
     const evidence = retrieved.filter((row) => row.questionIndex === questionIndex);
     const allowedIds = new Set(evidence.map((row) => row.id));
     const draft = drafts.find((item) => item.questionIndex === questionIndex);
     const anchors = namedEntityAnchors(question);
     const requestedNumbers = numericAnchors(question);
+    const requiresDemonstration = REQUESTS_DEMONSTRATED.test(normalized(question));
 
     const claims = (draft?.claims ?? [])
       .map((claim) => {
         if (ABSENCE_CLAIM_LANGUAGE.test(normalized(claim.text))) return null;
+        if (!claimTargetsQuestion(question, claim.text)) return null;
         const sourceIds = [...new Set(claim.sourceIds.filter((id) => allowedIds.has(id)))];
         if (sourceIds.length === 0 || claim.text.trim().length === 0) return null;
         const sourceRows = evidence.filter((row) => sourceIds.includes(row.id));
@@ -97,15 +166,32 @@ export function validateAnswerPayload(
           return null;
         }
 
+        const hasDemonstratedEvidence = sourceRows.some((row) =>
+          DEMONSTRATED_LANGUAGE.test(normalized(row.content)),
+        );
+        if (requiresDemonstration && !hasDemonstratedEvidence) return null;
+
         let evidenceLevel = claim.evidenceLevel;
+        if (evidenceLevel === 'demonstrated' && !hasDemonstratedEvidence) {
+          evidenceLevel = 'mentioned';
+        }
         if (evidenceLevel === 'domain') {
           const explicitlyDocumented = sourceRows.some((row) =>
             EXPLICIT_DOMAIN_LANGUAGE.test(row.content),
           );
-          if (!explicitlyDocumented && sourceIds.length < 2) evidenceLevel = 'demonstrated';
+          const independentDemonstrations = sourceRows.filter((row) =>
+            DEMONSTRATED_LANGUAGE.test(normalized(row.content)),
+          ).length;
+          if (!explicitlyDocumented && independentDemonstrations < 2) {
+            evidenceLevel = hasDemonstratedEvidence ? 'demonstrated' : 'mentioned';
+          }
         }
 
-        return { text: claim.text.trim(), evidenceLevel, sourceIds } satisfies AnswerClaim;
+        return {
+          text: canonicalizeOfficialNames(claim.text.trim(), sourceRows),
+          evidenceLevel,
+          sourceIds,
+        } satisfies AnswerClaim;
       })
       .filter((claim): claim is AnswerClaim => claim !== null);
 

@@ -7,6 +7,7 @@ export interface CreateMeetingParams {
 }
 
 export interface CreateMeetingResult {
+  bookingId: string;
   eventLink: string;
   meetLink?: string;
 }
@@ -18,4 +19,5 @@ export interface CreateMeetingResult {
  */
 export interface CalendarScheduler {
   createMeeting(params: CreateMeetingParams): Promise<CreateMeetingResult>;
+  cancelMeeting(bookingId: string): Promise<void>;
 }

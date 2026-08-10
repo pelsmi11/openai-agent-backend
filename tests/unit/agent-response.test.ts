@@ -145,7 +145,7 @@ describe('validateAnswerPayload', () => {
           answer: 'Tiene dominio documentado.',
           claims: [
             {
-              text: 'Tiene experiencia en dos contextos.',
+              text: 'Tiene experiencia con Node.js en dos contextos.',
               evidenceLevel: 'domain',
               sourceIds: ['one', 'two'],
             },
@@ -157,6 +157,128 @@ describe('validateAnswerPayload', () => {
     );
     expect(result.answerParts[0]?.claims[0]?.evidenceLevel).toBe('domain');
     expect(result.sources).toHaveLength(2);
+  });
+
+  it('rejects role interest when demonstrated experience was requested', () => {
+    const result = validateAnswerPayload(
+      ['What demonstrated experience does Héctor have with Node.js?'],
+      [
+        {
+          questionIndex: 0,
+          answer: 'He is interested in Node.js roles.',
+          claims: [
+            {
+              text: 'He is interested in backend roles with Node.js.',
+              evidenceLevel: 'demonstrated',
+              sourceIds: ['role-interest'],
+            },
+          ],
+        },
+      ],
+      [evidence('role-interest', 0, 'Los roles de interés incluyen backend con Node.js.')],
+      'en',
+    );
+
+    expect(result.answerParts[0]?.status).toBe('not_documented');
+    expect(result.sources).toEqual([]);
+  });
+
+  it('drops unrelated negative facts that were not requested', () => {
+    const result = validateAnswerPayload(
+      ['Dans quelles entreprises Héctor a-t-il travaillé ?'],
+      [
+        {
+          questionIndex: 0,
+          answer: "Il n’a pas encore travaillé dans une équipe internationale.",
+          claims: [
+            {
+              text: "Il n’a pas encore travaillé dans une équipe internationale.",
+              evidenceLevel: 'mentioned',
+              sourceIds: ['international'],
+            },
+          ],
+        },
+      ],
+      [evidence('international', 0, 'Todavía no ha trabajado en un equipo internacional.')],
+      'fr',
+    );
+
+    expect(result.answerParts[0]?.status).toBe('not_documented');
+    expect(result.sources).toEqual([]);
+  });
+
+  it('treats Italian absence wording as not documented', () => {
+    const result = validateAnswerPayload(
+      ['In quali aziende ha lavorato Héctor Martínez?'],
+      [
+        {
+          questionIndex: 0,
+          answer: 'Non sono indicate aziende specifiche.',
+          claims: [
+            {
+              text: 'Non sono indicate aziende specifiche.',
+              evidenceLevel: 'mentioned',
+              sourceIds: ['generic'],
+            },
+          ],
+        },
+      ],
+      [evidence('generic', 0, 'Esperienza professionale generica.')],
+      'it',
+    );
+
+    expect(result.answerParts[0]?.status).toBe('not_documented');
+  });
+
+  it('preserves the official Ministerio Público name across languages', () => {
+    const result = validateAnswerPayload(
+      ['Dans quelles entreprises Héctor a-t-il travaillé ?'],
+      [
+        {
+          questionIndex: 0,
+          answer: 'Il a travaillé au Ministère public du Guatemala.',
+          claims: [
+            {
+              text: 'Il a travaillé au Ministère public du Guatemala.',
+              evidenceLevel: 'demonstrated',
+              sourceIds: ['employment'],
+            },
+          ],
+        },
+      ],
+      [evidence('employment', 0, 'Héctor trabajó en el Ministerio Público de Guatemala.')],
+      'fr',
+    );
+
+    expect(result.answerParts[0]?.answer).toContain('Ministerio Público de Guatemala');
+  });
+
+  it('always treats private profile questions as not documented', () => {
+    const result = validateAnswerPayload(
+      ['¿Cuál es la dirección residencial exacta de Héctor?'],
+      [
+        {
+          questionIndex: 0,
+          answer: 'No se proporciona la dirección.',
+          claims: [
+            {
+              text: 'No se proporciona la dirección residencial exacta.',
+              evidenceLevel: 'mentioned',
+              sourceIds: ['unrelated'],
+            },
+          ],
+        },
+      ],
+      [evidence('unrelated', 0, 'Perfil profesional de Héctor.')],
+      'es',
+    );
+
+    expect(result.answerParts[0]).toMatchObject({
+      status: 'not_documented',
+      answer: 'No tengo ese dato documentado.',
+      claims: [],
+    });
+    expect(result.sources).toEqual([]);
   });
 });
 

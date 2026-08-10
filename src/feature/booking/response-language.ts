@@ -18,8 +18,63 @@ const MISSING_ANSWERS: Record<SupportedResponseLanguage, string> = {
   fr: 'Je ne dispose pas de cette information documentée.',
 };
 
+const PROGRESS_MESSAGES: Record<SupportedResponseLanguage, string> = {
+  es: 'Consultando la experiencia documentada de Héctor…',
+  en: "Checking Héctor's documented experience…",
+  it: "Consultando l'esperienza documentata di Héctor…",
+  de: 'Ich prüfe Héctors dokumentierte Erfahrung…',
+  fr: "Je consulte l'expérience documentée de Héctor…",
+};
+
+const PENDING_MEETING_MESSAGES: Record<SupportedResponseLanguage, string> = {
+  es: 'No se ha agendado ninguna reunión. Cuando estén todos los datos, te pediré una confirmación explícita antes de reservarla.',
+  en: 'No meeting has been booked. Once all details are available, I will ask for your explicit confirmation before booking it.',
+  it: 'Non è stata prenotata alcuna riunione. Quando saranno disponibili tutti i dati, chiederò una conferma esplicita prima di prenotarla.',
+  de: 'Es wurde noch kein Termin gebucht. Sobald alle Angaben vorliegen, bitte ich vor der Buchung um eine ausdrückliche Bestätigung.',
+  fr: "Aucune réunion n'a été réservée. Lorsque toutes les informations seront disponibles, je demanderai une confirmation explicite avant de la réserver.",
+};
+
+const EXPLICIT_LANGUAGE_PATTERNS: Array<{
+  language: SupportedResponseLanguage;
+  pattern: RegExp;
+}> = [
+  { language: 'es', pattern: /(?:solo|únicamente|solamente)\s+en\s+español|responde\s+en\s+español/i },
+  { language: 'en', pattern: /(?:only|exclusively)\s+in\s+english|answer\s+in\s+english/i },
+  { language: 'it', pattern: /(?:solo|soltanto)\s+in\s+italiano|rispondi\s+in\s+italiano/i },
+  { language: 'de', pattern: /(?:nur|ausschließlich)\s+auf\s+deutsch|antworte\s+(?:nur\s+)?auf\s+deutsch/i },
+  { language: 'fr', pattern: /(?:uniquement|seulement)\s+en\s+français|réponds?\s+en\s+français/i },
+];
+
+const LANGUAGE_MARKERS: Record<SupportedResponseLanguage, RegExp> = {
+  es: /[¿¡ñ]|\b(?:qué|cuál|cómo|dónde|experiencia|trabajado|quiero|reunión|agendar)\b/i,
+  en: /\b(?:what|which|how|where|experience|worked|meeting|schedule|answer)\b/i,
+  it: /\b(?:quale|quali|come|dove|esperienza|lavorato|riunione|rispondi)\b/i,
+  de: /\b(?:welche|welchen|wie|wo|erfahrung|gearbeitet|termin|antworte)\b/i,
+  fr: /\b(?:quel|quelle|quelles|comment|où|expérience|travaillé|réunion|réponds)\b/i,
+};
+
 export function missingAnswerForLanguage(language: SupportedResponseLanguage): string {
   return MISSING_ANSWERS[language];
+}
+
+export function detectResponseLanguage(message: string): SupportedResponseLanguage {
+  const explicit = EXPLICIT_LANGUAGE_PATTERNS.find(({ pattern }) => pattern.test(message));
+  if (explicit) return explicit.language;
+
+  const scores = SUPPORTED_RESPONSE_LANGUAGES.map((language) => ({
+    language,
+    score: (message.match(new RegExp(LANGUAGE_MARKERS[language].source, 'gi')) ?? []).length,
+  })).sort((left, right) => right.score - left.score);
+
+  return scores[0] && scores[0].score > 0 ? scores[0].language : 'es';
+}
+
+export function progressMessageForLanguage(language: SupportedResponseLanguage): string {
+  return PROGRESS_MESSAGES[language];
+}
+
+export function pendingMeetingMessageForLanguage(language: SupportedResponseLanguage): string {
+  return PENDING_MEETING_MESSAGES[language];
 }
 
 export function strictLanguageInstruction(language: SupportedResponseLanguage): string {

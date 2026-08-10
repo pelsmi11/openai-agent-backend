@@ -16,6 +16,10 @@ import {
 import { CONFIG } from '../../utils/constants/config.js';
 import { scheduleMeetingTool } from './agent-tools.js';
 import {
+  containsPendingMeetingNotice,
+  isExplicitMeetingConfirmation,
+} from './meeting-confirmation.js';
+import {
   renderReply,
   validateAnswerPayload,
   type AnswerPart,
@@ -25,10 +29,11 @@ import {
 } from './agent-response.js';
 import {
   inferPersonalInfoCategories,
-  searchPersonalInfo,
-  searchPersonalInfoByCategories,
+  retrievePersonalInfo,
 } from './personal-info-search.service.js';
 import {
+  detectResponseLanguage,
+  pendingMeetingMessageForLanguage,
   strictLanguageInstruction,
   SUPPORTED_RESPONSE_LANGUAGES,
   type SupportedResponseLanguage,
@@ -102,7 +107,7 @@ const decompositionModel = planningChatModel.withStructuredOutput(DecompositionS
 const synthesisModel = synthesisChatModel.withStructuredOutput(DraftAnswerSchema, {
   name: 'synthesize_grounded_answer',
 });
-const meetingModel = meetingChatModel.bindTools([scheduleMeetingTool]);
+const meetingModelWithTools = meetingChatModel.bindTools([scheduleMeetingTool]);
 
 function messageText(message: BaseMessage | undefined): string {
   if (!message) return '';
@@ -132,7 +137,9 @@ async function classifyIntent(state: typeof StateAnnotation.State) {
   ]);
   const explicitlyAboutHector = /\bh[eé]ctor\b/i.test(latestMessage);
   const intent =
-    result.intent === 'out_of_scope' && explicitlyAboutHector
+    isExplicitMeetingConfirmation(latestMessage)
+      ? ('meeting' as const)
+      : result.intent === 'out_of_scope' && explicitlyAboutHector
       ? ('candidate_profile' as const)
       : result.intent;
   const plannedQuestions = normalizeQuestions(result.questions, latestMessage);
@@ -162,14 +169,15 @@ async function decomposeQuestion(state: typeof StateAnnotation.State) {
   const decompositionPrompt =
     `Decompose the user request into 1 to 5 self-contained questions. ${languageRule} For every item, question is user-visible and must use TARGET_LANGUAGE; retrievalQuery is internal and must be written in Spanish for the Spanish-language corpus, explicitly name Héctor Martínez, and add only useful professional synonyms such as education/title/university or current role/position/employer without assuming the answer. Preserve every requested fact, comparison, uncertainty, and recruiter criterion in the original order. When the user enumerates N distinct items or asks to answer separately, return exactly N items. A simple request must remain one item. Do not add answer targets the user did not request.`;
   const firstSentence = userQuestion.split('?')[0] ?? userQuestion;
-  const enumeratedCount = /por separado|separately|separatamente|séparément|getrennt|einzeln/i.test(userQuestion)
+  const requestsSeparateAnswers = /por separado|cada punto|separately|each point|separatamente|ogni punto|séparément|chaque point|getrennt|jeden punkt|einzeln/i.test(userQuestion);
+  const enumeratedCount = requestsSeparateAnswers
     ? firstSentence.split(/,\s*|\s+(?:y|and|e|et|und)\s+/i).length
     : 1;
   const expectedMinimum = /distingue|distinguish|distingui|distinguer|unterscheide/i.test(userQuestion)
     ? Math.max(2, enumeratedCount)
     : enumeratedCount;
   let questions = state.subQuestions;
-  if (questions.length < expectedMinimum) {
+  if (questions.length < expectedMinimum || (requestsSeparateAnswers && questions.length !== expectedMinimum)) {
     const result = await decompositionModel.invoke([
       new SystemMessage(
         `${decompositionPrompt} The request below contains ${expectedMinimum} distinct answer targets. Return exactly ${expectedMinimum} items; do not merge them. ${languageRule}`,
@@ -177,6 +185,12 @@ async function decomposeQuestion(state: typeof StateAnnotation.State) {
       new HumanMessage(userQuestion),
     ]);
     questions = normalizeQuestions(result.questions, userQuestion);
+  }
+  if (requestsSeparateAnswers && questions.length > expectedMinimum) {
+    questions = questions.slice(0, expectedMinimum).map((question, index) => ({
+      ...question,
+      index,
+    }));
   }
   if (questions.length < expectedMinimum && /cada\s+\w+\s+por separado/i.test(userQuestion)) {
     const enumeratedNames = [...new Set(firstSentence.match(/\b[A-Z][A-Za-z0-9.-]{1,}\b/g) ?? [])];
@@ -220,15 +234,13 @@ function dispatchRetrievals(state: typeof StateAnnotation.State) {
 
 async function retrieveEvidence(state: typeof StateAnnotation.State) {
   const question = state.activeQuestion;
-  const [rows, categoryRows] = await Promise.all([
-    searchPersonalInfo(question.retrievalQuery),
-    searchPersonalInfoByCategories(
-      question.retrievalQuery,
-      inferPersonalInfoCategories(question.retrievalQuery),
-    ),
-  ]);
+  const retrievalContext = `${question.retrievalQuery}\n${question.question}`;
+  const rows = await retrievePersonalInfo(question.retrievalQuery, {
+    categories: inferPersonalInfoCategories(retrievalContext),
+    keywordContext: retrievalContext,
+  });
   return {
-    retrievalResults: [...rows, ...categoryRows].map((row) => ({
+    retrievalResults: rows.map((row) => ({
       ...row,
       questionIndex: question.index,
     })),
@@ -265,7 +277,7 @@ async function synthesizeAnswer(state: typeof StateAnnotation.State) {
     }));
     return synthesisModel.invoke([
       new SystemMessage(
-        `Answer each subquestion using only its supplied sources. ${languageRule} Return one answerPart for every questionIndex and preserve order. Every factual claim must cite one or more sourceIds from that same subquestion. Use mentioned when a source only names a skill, demonstrated when it contains a concrete project/responsibility/result, and domain only for explicit mastery or multiple independent demonstrations. Evidence that is merely related is insufficient: if the question asks for an exact quantity, duration, guarantee, salary, identity detail, named organization, named service, or other exact fact, return no claims unless a source explicitly contains that exact fact or name. If the evidence does not directly answer a subquestion, return no claims. Never infer missing facts. Before returning, verify that every question, answer, and claim is entirely in TARGET_LANGUAGE and rewrite any mixed-language text.`,
+        `Answer each subquestion using only its supplied sources. ${languageRule} Return one answerPart for every questionIndex and preserve order. Every factual claim must cite one or more sourceIds from that same subquestion. Use mentioned when a source only names a skill, demonstrated only when it contains a concrete project, action, responsibility, or result, and domain only for explicit mastery or multiple independent demonstrations. If the user explicitly asks for demonstrated experience, omit sources that merely state proficiency, interest, or a target role. Evidence that is merely related is insufficient: if the question asks for an exact quantity, duration, guarantee, salary, identity detail, named organization, named service, or other exact fact, return no claims unless a source explicitly contains that exact fact or name. Copy official organization names exactly as written in the sources; never partially translate them. Answer only the requested target: do not add limitations, comparisons, international-experience statements, recommendations, or other related facts that the subquestion did not request. If the evidence does not directly answer a subquestion, return no claims. Never infer missing facts. Before returning, verify that every question, answer, and claim is entirely in TARGET_LANGUAGE and rewrite any mixed-language text.`,
       ),
       new HumanMessage(JSON.stringify({ originalQuestion: userMessage, evidence: evidencePayload })),
     ]);
@@ -290,16 +302,13 @@ async function synthesizeAnswer(state: typeof StateAnnotation.State) {
       missingIndexes.map(async (questionIndex) => {
         const question = state.subQuestions[questionIndex];
         if (!question) return [];
-        const rows = await searchPersonalInfo(question.retrievalQuery, {
+        const rows = await retrievePersonalInfo(question.retrievalQuery, {
           minSimilarity: 0.5,
           matchCount: 10,
+          categories: inferPersonalInfoCategories(`${question.retrievalQuery}\n${question.question}`),
+          keywordContext: `${question.retrievalQuery}\n${question.question}`,
         });
-        const categories = inferPersonalInfoCategories(question.retrievalQuery);
-        const categoryRows = await searchPersonalInfoByCategories(
-          question.retrievalQuery,
-          categories,
-        );
-        return [...rows, ...categoryRows].map((row) => ({ ...row, questionIndex }));
+        return rows.map((row) => ({ ...row, questionIndex }));
       }),
     );
     const expandedEvidence = dedupeEvidence([...evidence, ...fallbackRows.flat()]);
@@ -341,12 +350,29 @@ function todayContext(): string {
 
 async function meetingAgent(state: typeof StateAnnotation.State) {
   const languageRule = strictLanguageInstruction(state.responseLanguage);
-  const response = await meetingModel.invoke([
+  const latestMessage = messageText(latestHumanMessage(state));
+  const explicitlyConfirmed = isExplicitMeetingConfirmation(latestMessage);
+  const model = explicitlyConfirmed ? meetingModelWithTools : meetingChatModel;
+  const confirmationRule = explicitlyConfirmed
+    ? 'The latest user message explicitly confirms the booking. If every required field is available in the conversation, call scheduleMeeting exactly once with confirmed=true. If any field is missing, ask for it and do not call the tool.'
+    : 'The latest user message is not an explicit booking confirmation. You do not have access to scheduling tools in this turn. Gather missing details; when all details are available, summarize them and ask the user to explicitly confirm. State clearly that no meeting has been booked yet and never say that sharing details alone will book it.';
+  const response = await model.invoke([
     new SystemMessage(
-      `Help with scheduling only because the user explicitly requested it. ${languageRule} Ask for any missing email, date/time, timezone, duration, and reason. Translate tool errors and confirmations into TARGET_LANGUAGE. Do not call scheduleMeeting until its schema is satisfied. Never claim success unless the tool returns confirmed=true. Before returning, rewrite any mixed-language text. ${todayContext()}`,
+      `Help with scheduling only because the user explicitly requested it. ${languageRule} Ask for any missing email, date/time, timezone, duration, and reason. ${confirmationRule} Translate tool errors and confirmations into TARGET_LANGUAGE. Never claim success unless the tool returns confirmed=true and a non-empty bookingId. Before returning, rewrite any mixed-language text. ${todayContext()}`,
     ),
     ...state.messages,
   ]);
+  if (!explicitlyConfirmed) {
+    const responseText = messageText(response).trim();
+    const reply = containsPendingMeetingNotice(responseText)
+      ? responseText
+      : `${responseText}\n\n${pendingMeetingMessageForLanguage(state.responseLanguage)}`;
+    return {
+      messages: [new AIMessage(reply)],
+      answerParts: [],
+      sources: [],
+    };
+  }
   return { messages: [response], answerParts: [], sources: [] };
 }
 
@@ -385,6 +411,8 @@ export interface AgentRunResult {
   reply: string;
   answerParts: AnswerPart[];
   sources: PublicSource[];
+  responseLanguage: SupportedResponseLanguage;
+  responseKind: AgentIntent;
 }
 
 export async function runAgent(message: string, threadId: string): Promise<AgentRunResult> {
@@ -403,6 +431,8 @@ export async function runAgent(message: string, threadId: string): Promise<Agent
     reply: messageText(lastMessage),
     answerParts: result.answerParts ?? [],
     sources: result.sources ?? [],
+    responseLanguage: result.responseLanguage ?? detectResponseLanguage(message),
+    responseKind: result.intent ?? 'out_of_scope',
   };
 }
 

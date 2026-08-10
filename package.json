@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:integration": "vitest run tests/integration",
     "eval:rag": "tsx evals/run-rag-evals.ts",
-    "eval:calibrate": "tsx evals/calibrate-threshold.ts"
+    "eval:calibrate": "tsx evals/calibrate-threshold.ts",
+    "seed:critical-evidence": "tsx scripts/seed-critical-profile-evidence.ts"
   },
   "packageManager": "pnpm@9.15.0",
   "keywords": [],
